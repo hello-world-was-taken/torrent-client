@@ -26,8 +26,8 @@ func ParseTorrentFile(filename string) (model.Torrent, error) {
 	}
 
 	// generate the info hash
-	_ = GenerateInfoHash(torrent.Info)
-	// torrent.InfoHash = infoHash
+	infoHash := GenerateInfoHash(torrent.Info)
+	torrent.InfoHash = infoHash
 	fmt.Println("Torrent file parsed successfully")
 	return torrent, nil
 }
