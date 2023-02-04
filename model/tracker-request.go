@@ -12,6 +12,7 @@ type TrackerRequestParams struct {
 	Uploaded   int    `bencode:"uploaded"`
 	Downloaded int64    `bencode:"downloaded"`
 	Left       int64    `bencode:"left"`
+	Compact    int    `bencode:"compact"`
 	Event      string `bencode:"event"`
 }
 
@@ -22,6 +23,7 @@ func (t *TrackerRequestParams) Encode() string {
 		"peer_id":    []string{t.Peer_id},
 		"port":       []string{strconv.Itoa(t.Port)},
 		"uploaded":   []string{strconv.Itoa(t.Uploaded)},
+		"compact":    []string{strconv.Itoa(t.Compact)},
 		// TODO: int64 to string conversion
 		"downloaded": []string{strconv.Itoa(int(t.Downloaded))},
 		"left":       []string{strconv.Itoa(int(t.Left))},
