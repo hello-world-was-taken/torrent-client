@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-type TrackerRequest struct {
+type TrackerRequestParams struct {
 	Info_hash  [20]byte `bencode:"info_hash"`
 	Peer_id    string `bencode:"peer_id"`
 	Port       int    `bencode:"port"`
@@ -15,7 +15,7 @@ type TrackerRequest struct {
 	Event      string `bencode:"event"`
 }
 
-func (t *TrackerRequest) Encode() string {
+func (t *TrackerRequestParams) Encode() string {
 	// encode the tracker request
 	encodedRequest := url.Values{
 		"info_hash":  []string{string(t.Info_hash[:])},
