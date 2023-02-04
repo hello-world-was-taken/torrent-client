@@ -10,5 +10,5 @@ type Torrent struct {
 	// ignore attribute if it is not present
 	Encoding string `bencode:"encoding,omitempty"`
 	Info         Info `bencode:"info,omitempty"`
-	InfoHash    string
+	InfoHash    [20]byte
 }

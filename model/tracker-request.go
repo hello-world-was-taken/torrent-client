@@ -6,7 +6,7 @@ import (
 )
 
 type TrackerRequest struct {
-	Info_hash  string `bencode:"info_hash"`
+	Info_hash  [20]byte `bencode:"info_hash"`
 	Peer_id    string `bencode:"peer_id"`
 	Port       int    `bencode:"port"`
 	Uploaded   int    `bencode:"uploaded"`
@@ -17,15 +17,16 @@ type TrackerRequest struct {
 
 func (t *TrackerRequest) Encode() string {
 	// encode the tracker request
-	encodedRequest := url.Values{}
-	encodedRequest.Add("info_hash", t.Info_hash)
-	encodedRequest.Add("peer_id", t.Peer_id)
-	encodedRequest.Add("port", string(strconv.Itoa(t.Port)))
-	encodedRequest.Add("uploaded", string(strconv.Itoa(t.Uploaded)))
-	// TODO: int64 to string conversion
-	encodedRequest.Add("downloaded", string(strconv.Itoa(int(t.Downloaded))))
-	encodedRequest.Add("left", string(strconv.Itoa(int(t.Left))))
-	encodedRequest.Add("event", t.Event)
+	encodedRequest := url.Values{
+		"info_hash":  []string{string(t.Info_hash[:])},
+		"peer_id":    []string{t.Peer_id},
+		"port":       []string{strconv.Itoa(t.Port)},
+		"uploaded":   []string{strconv.Itoa(t.Uploaded)},
+		// TODO: int64 to string conversion
+		"downloaded": []string{strconv.Itoa(int(t.Downloaded))},
+		"left":       []string{strconv.Itoa(int(t.Left))},
+		"event":      []string{t.Event},
+	}
 
 	return encodedRequest.Encode()
 }
