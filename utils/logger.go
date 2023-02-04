@@ -21,6 +21,9 @@ func LogTorrent(torrent model.Torrent) {
 
 
 // print tracker list of peers of tracker response to console
-func LogPeers(response *model.TrackerResponse) {
-	fmt.Println("Peers: ", response)
+func LogPeers(response []model.Peer) {
+	for _, peer := range response {
+		fmt.Println("ip: ", peer.IP)
+		fmt.Println("port: ", peer.Port)
+	}
 }
