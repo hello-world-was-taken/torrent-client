@@ -7,7 +7,7 @@ import (
 	"torrent-dsp/model"
 	"torrent-dsp/utils"
 
-	bencode "github.com/zeebo/bencode"
+	"github.com/zeebo/bencode"
 )
 
 // Get peers from one of the trackers in the torrent file
@@ -38,6 +38,7 @@ func buildTrackerRequestURLs(torrent *model.Torrent) ([]string, error) {
 		Uploaded:   0,
 		Downloaded: 0,
 		Left:       torrent.Info.Length,
+		Compact:    1,
 		Event:      "started",
 	}
 
@@ -97,6 +98,14 @@ func getPeerFromURL(URL string) (model.TrackerResponse, error) {
 	if err != nil {
 		return model.TrackerResponse{}, err
 	}
+
+	peers, err := utils.PeerParser([]byte(trackerResponse.Peers))
+	if err != nil {
+		return model.TrackerResponse{}, err
+	}
+
+	// log the peers
+	utils.LogPeers(peers)
 
 	fmt.Println("Retrieved peers successfully")
 	return trackerResponse, nil

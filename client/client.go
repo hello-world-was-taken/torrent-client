@@ -10,7 +10,10 @@ import (
 
 func ConnectToTracker() {
 	// open torrent file from the current directory and parse it
-	torrent, err := utils.ParseTorrentFile("./torrent-files/ubuntu-22.10-desktop-amd64.iso.torrent")
+	// TODO: remove this hardcoded torrent file names
+	// ubuntu-22.10-desktop-amd64.iso
+	// vlc-media-player
+	torrent, err := utils.ParseTorrentFile("./torrent-files/vlc-media-player.torrent")
 	if err != nil {
 		log.Fatal(err)
 	}
