@@ -1,7 +1,8 @@
 package model
 
+import "net"
+
 type Peer struct {
-	IP   string `bencode:"ip"`
-	Port int   `bencode:"port"`
-	Peer_id string `bencode:"peer_id"`
+	IP   net.IP `bencode:"ip"`
+	Port uint16   `bencode:"port"`
 }
