@@ -2,7 +2,6 @@ package utils
 
 import (
 	"crypto/sha1"
-	"fmt"
 	"log"
 
 	"torrent-dsp/model"
