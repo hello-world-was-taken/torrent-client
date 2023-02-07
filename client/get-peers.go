@@ -10,6 +10,10 @@ import (
 	"github.com/zeebo/bencode"
 )
 
+const (
+	PEER_ID = "-TR2940-k8hj0wgej6ch"
+)
+
 // Get peers from one of the trackers in the torrent file
 func GetPeersFromTrackers(torrent *model.Torrent) ([]*model.Peer, error) {
 	// create a request to send to the tracker
@@ -33,7 +37,7 @@ func buildTrackerRequestURLs(torrent *model.Torrent) ([]string, error) {
 	// query parameters to the tracker url
 	requestParams := model.TrackerRequestParams{
 		Info_hash:  torrent.InfoHash,
-		Peer_id:    "-TR2940-k8hj0wgej6ch",
+		Peer_id:    PEER_ID,
 		Port:       6881,
 		Uploaded:   0,
 		Downloaded: 0,
