@@ -8,18 +8,6 @@ type Message struct {
 	Payload []byte `bencode:"payload"`
 }
 
-const (
-	CHOKE = 0
-	UNCHOKE = 1
-	INTERESTED = 2
-	NOT_INTERESTED = 3
-	HAVE = 4
-	BITFIELD = 5
-	REQUEST = 6
-	PIECE = 7
-	CANCEL = 8
-)
-
 // serialize the message into a byte array
 // <msgLength 4 byte> <message id 1 byte> <payload>
 func (message *Message) Serialize() []byte {
