@@ -1,4 +1,3 @@
-// Package torrentparser provides a simple interface for parsing torrent files
 package utils
 
 import (
@@ -26,8 +25,7 @@ func ParseTorrentFile(filename string) (model.Torrent, error) {
 	}
 
 	// generate the info hash
-	infoHash := GenerateInfoHash(torrent.Info)
-	torrent.InfoHash = infoHash
+	torrent.GenerateInfoHash()
 	fmt.Println("Torrent file parsed successfully")
 	return torrent, nil
 }
