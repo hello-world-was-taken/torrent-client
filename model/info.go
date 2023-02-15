@@ -9,3 +9,15 @@ type Info struct {
 	Length      int64 `bencode:"length,omitempty"`
 	Files       []File `bencode:"files,omitempty"`
 }
+
+
+func (i *Info) PiecesToByteArray() []byte {
+	// convert the pieces string to a byte array of hashes (20 bytes each)
+	pieces := []byte(i.Pieces)
+	piecesInByteArray := make([]byte, len(pieces)/20*20)
+	for i := 0; i < len(pieces); i += 20 {
+		copy(piecesInByteArray[i/20*20:], pieces[i:i+20])
+	}
+
+	return piecesInByteArray
+}
