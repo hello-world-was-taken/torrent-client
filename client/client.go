@@ -60,7 +60,7 @@ func CreateClient(torrent model.Torrent, peer model.Peer, clientID string, conn 
 
 	// receive bitfield message from the peer
 	fmt.Println("Getting Bit Field...")
-	bitfieldMessage, err := ReceiveBitfieldMessage(conn)
+	bitFieldMessage, err := ReceiveBitFieldMessage(conn)
 	fmt.Println("Received Bit field.")
 	if err != nil {
 		log.Fatal(err)
@@ -69,7 +69,7 @@ func CreateClient(torrent model.Torrent, peer model.Peer, clientID string, conn 
 	// create a new client
 	client := &model.Client{
 		Peer:        peer,
-		BitField:    bitfieldMessage.Payload,
+		BitField:    bitFieldMessage.Payload,
 		Conn:        conn,
 		ChokedState: 0,
 	}

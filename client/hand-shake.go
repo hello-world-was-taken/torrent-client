@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 
 	"torrent-dsp/constant"
 	"torrent-dsp/model"
 	"torrent-dsp/utils"
 )
 
+// TODO: rename file to reflect both handshake and bitfield message
 func ShakeHandWithPeer(torrent model.Torrent, peer model.Peer, clientID string, conn net.Conn) {
 	// create a new connection to the peer
 	conn, err := net.Dial("tcp", peer.String())
@@ -47,4 +49,19 @@ func ShakeHandWithPeer(torrent model.Torrent, peer model.Peer, clientID string, 
 	}
 
 	fmt.Println("Handshake successful")
+}
+
+func ReceiveBitFieldMessage(conn net.Conn) (*model.Message, error) {
+	conn.SetDeadline(time.Now().Add(10 * time.Second))
+	defer conn.SetDeadline(time.Time{}) // Disable the deadline
+
+	// receive the bitField message
+	bitFieldMessage := model.DeserializeMessage(conn)
+
+	// check that the message is a bit field message
+	if bitFieldMessage.MessageID != constant.BITFIELD {
+		log.Fatal("expected bit field message")
+	}
+
+	return bitFieldMessage, nil
 }
