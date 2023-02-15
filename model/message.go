@@ -1,10 +1,14 @@
 package model
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"log"
+	"net"
+)
 
 type Message struct {
-	Length int    `bencode:"length"`
-	MessageID int    `bencode:"message_id"`
+	Length uint32    `bencode:"length"`
+	MessageID uint8    `bencode:"message_id"`
 	Payload []byte `bencode:"payload"`
 }
 
@@ -22,10 +26,24 @@ func (message *Message) Serialize() []byte {
 
 
 // deserialize the message byte array into a Message struct
-func DeserializeMessage(buffer []byte) *Message {
+func DeserializeMessage(conn net.Conn) *Message {
+	length := make([]byte, 4)
+	_, err := conn.Read(length)
+	if err != nil {
+		log.Fatalf("Error reading message length: %s", err)
+	}
+
+	msgLength := binary.BigEndian.Uint32(length)
+	buffer := make([]byte, msgLength)
+	_, err = conn.Read(buffer)
+	if err != nil {
+		log.Fatalf("Error reading message: %s", err)
+	}
+
+
 	message := &Message{}
-	message.Length = int(binary.BigEndian.Uint32(buffer[0:4]))
-	message.MessageID = int(buffer[4])
+	message.Length = msgLength
+	message.MessageID = buffer[4]
 	message.Payload = buffer[5:]
 
 	return message
