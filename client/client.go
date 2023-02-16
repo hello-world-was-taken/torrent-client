@@ -3,11 +3,11 @@ package client
 import (
 	"fmt"
 	"log"
-	"net"
+	// "net"
 
-	"torrent-dsp/constant"
+	// "torrent-dsp/constant"
 	"torrent-dsp/model"
-	"torrent-dsp/utils"
+	// "torrent-dsp/utils"
 )
 
 func ConnectToTracker() {
@@ -15,7 +15,7 @@ func ConnectToTracker() {
 	// TODO: remove this hardcoded torrent file names
 	// ubuntu-22.10-desktop-amd64.iso
 	// vlc-media-player
-	torrent, err := utils.ParseTorrentFile("./torrent-files/ubuntu-22.10-desktop-amd64.iso.torrent")
+	torrent, err := model.ParseTorrentFile("./torrent-files/vlc-media-player.torrent")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -30,49 +30,61 @@ func ConnectToTracker() {
 	// utils.LogPeers(peers)
 
 	// connect to the peers
-	fmt.Println("Connecting to peers...")
-	ConnectToPeers(peers, torrent)
-
-}
-
-// connect to the peers
-func ConnectToPeers(peers []model.Peer, torrent model.Torrent) {
+	fmt.Println("Connecting to peers... Length: ", len(peers))
+	// ConnectToPeers(peers, torrent)
+	// create a client for each peer
 	for _, peer := range peers {
-		// create a new connection to the peer
-		conn, err := net.DialTimeout("tcp", peer.String(), constant.CONNECTION_TIMEOUT)
-		// TODO: close connection incase of error
+
+		go ClientFactory(peer, torrent)
 		if err != nil {
-			fmt.Println("Error connecting to peer: ", peer.String())
-			log.Fatal(err)
+			log.Fatal("Error creating client for peer: ", peer.String())
 		}
 
-		// create a new client with the peer
-		client := CreateClient(torrent, peer, constant.CLIENT_ID, conn)
-		fmt.Println("------------  Bit Field  -------------> ", client.BitField)
-
+		// fmt.Println("------------  Bit Field  -------------> ", client.BitField)
+		// fmt.Println("------------  Choked State  -------------> ", client.ChokedState)
 	}
+
 }
 
-func CreateClient(torrent model.Torrent, peer model.Peer, clientID string, conn net.Conn) *model.Client {
-	// TODO: use goroutines to connect to multiple peers at the same time
-	// shake hands with the peer
-	ShakeHandWithPeer(torrent, peer, constant.CLIENT_ID, conn)
+// // connect to the peers
+// func ConnectToPeers(peers []model.Peer, torrent model.Torrent) {
+// 	for _, peer := range peers {
+// 		// create a new connection to the peer
+// 		conn, err := net.DialTimeout("tcp", peer.String(), constant.CONNECTION_TIMEOUT)
+// 		// TODO: close connection incase of error
+// 		if err != nil {
+// 			fmt.Println("Error connecting to peer: ", peer.String())
+// 			log.Fatal(err)
+// 		}
 
-	// receive bitfield message from the peer
-	fmt.Println("Getting Bit Field...")
-	bitFieldMessage, err := ReceiveBitFieldMessage(conn)
-	fmt.Println("Received Bit field.")
-	if err != nil {
-		log.Fatal(err)
-	}
+// 		// create a new client with the peer
+// 		client := CreateClient(torrent, peer, constant.CLIENT_ID, conn)
+// 		fmt.Println("------------  Bit Field  -------------> ", client.BitField)
 
-	// create a new client
-	client := &model.Client{
-		Peer:        peer,
-		BitField:    bitFieldMessage.Payload,
-		Conn:        conn,
-		ChokedState: 0,
-	}
+// 	}
+// }
 
-	return client
-}
+
+// func CreateClient(torrent model.Torrent, peer model.Peer, clientID string, conn net.Conn) *model.Client {
+// 	// TODO: use goroutines to connect to multiple peers at the same time
+// 	// shake hands with the peer
+// 	ShakeHandWithPeer(torrent, peer, constant.CLIENT_ID, conn)
+
+// 	// receive bit field message from the peer
+// 	fmt.Println("Getting Bit Field...")
+// 	bitFieldMessage, err := ReceiveBitFieldMessage(conn)
+// 	fmt.Println("Received Bit field.")
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+
+// 	// create a new client
+// 	client := &model.Client{
+// 		Peer:        peer,
+// 		BitField:    bitFieldMessage.Payload,
+// 		Conn:        conn,
+// 		ChokedState: 0,
+// 	}
+
+// 	return client
+// }
