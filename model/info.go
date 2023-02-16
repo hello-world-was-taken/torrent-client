@@ -1,5 +1,9 @@
 package model
 
+import (
+	"torrent-dsp/utils"
+)
+
 // Info represents the info section of a torrent file
 type Info struct {
 	PieceLength int64 `bencode:"piece length,omitempty"`
@@ -11,12 +15,17 @@ type Info struct {
 }
 
 
-func (i *Info) PiecesToByteArray() []byte {
+func (i *Info) PiecesToByteArray() [][20]byte {
 	// convert the pieces string to a byte array of hashes (20 bytes each)
 	pieces := []byte(i.Pieces)
-	piecesInByteArray := make([]byte, len(pieces)/20*20)
+	piecesInByteArray := [][20]byte{}
+	
 	for i := 0; i < len(pieces); i += 20 {
-		copy(piecesInByteArray[i/20*20:], pieces[i:i+20])
+		curSlice := [20]byte{}
+		end := utils.CalcMin(i+20, len(pieces))
+		copy(curSlice[:], pieces[i:end])
+
+		piecesInByteArray = append(piecesInByteArray, curSlice)
 	}
 
 	return piecesInByteArray
