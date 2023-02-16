@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/binary"
+	"fmt"
 	"log"
 	"net"
 )
@@ -40,11 +41,24 @@ func DeserializeMessage(conn net.Conn) *Message {
 		log.Fatalf("Error reading message: %s", err)
 	}
 
-
+	fmt.Println("Message length: --------> ", msgLength)
 	message := &Message{}
+
+	if msgLength == 0 {
+		// keep alive message
+		return message
+	}
+
+	if msgLength == 1 {
+		// either choke, unchoke, interested, not interested
+		fmt.Println("payload: ", message.Payload)
+		message.MessageID = buffer[0]
+		fmt.Println("message id: ", message.MessageID)
+		return message
+	}
 	message.Length = msgLength
-	message.MessageID = buffer[4]
-	message.Payload = buffer[5:]
+	message.MessageID = buffer[0]
+	message.Payload = buffer[1:]
 
 	return message
 }
