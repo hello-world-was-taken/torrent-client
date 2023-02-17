@@ -1,23 +1,23 @@
 package client
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"net"
-	"bytes"
 	"time"
 
-	"torrent-dsp/model"
 	"torrent-dsp/constant"
+	"torrent-dsp/model"
 	"torrent-dsp/utils"
 )
-
 
 func ClientFactory(peer model.Peer, torrent model.Torrent) (*model.Client, error) {
 	client, err := createClient(peer, torrent)
 	if err != nil {
-		log.Fatal(err)
-		return nil, err
+		fmt.Println("Error creating client for peer: ", peer.String())
+		// log.Fatal(err)
+		return nil, nil
 	}
 
 	return client, nil
@@ -58,23 +58,21 @@ func createClient(peer model.Peer, torrent model.Torrent) (*model.Client, error)
 	return client, nil
 }
 
-
 // connect to peer. If not possible then return error
-func connectToPeer(peer model.Peer, torrent model.Torrent) (net.Conn, error)  {
+func connectToPeer(peer model.Peer, torrent model.Torrent) (net.Conn, error) {
 
 	conn, err := net.DialTimeout("tcp", peer.String(), constant.CONNECTION_TIMEOUT)
 	// TODO: close connection incase of error
 	if err != nil {
 		fmt.Println("Error connecting to peer: ", peer.String())
-		log.Fatal(err)
+		// log.Fatal(err)
 		return nil, err
 	}
 
 	return conn, nil
 }
 
-
-func ShakeHandWithPeer(torrent model.Torrent, peer model.Peer, clientID string, conn net.Conn) (error) {
+func ShakeHandWithPeer(torrent model.Torrent, peer model.Peer, clientID string, conn net.Conn) error {
 	// create a new connection to the peer
 	// conn, err := net.Dial("tcp", peer.String())
 	// if err != nil {
@@ -96,17 +94,20 @@ func ShakeHandWithPeer(torrent model.Torrent, peer model.Peer, clientID string, 
 	fmt.Println("Sending handshake request to peer: ", peer.String())
 	handshakeResponse, err := handshakeRequest.Send(conn)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Error sending handshake request to peer: ", peer.String())
+		return err
 	}
 
 	// check that the infohash in the response matches the infohash of the torrent
 	if !bytes.Equal(handshakeResponse.InfoHash[:], torrent.InfoHash[:]) {
-		log.Fatal("handshake response infohash does not match torrent infohash")
+		fmt.Println("handshake response infohash does not match torrent infohash")
+		return err
 	}
 
 	// check that the peer id in the response is different from ours
 	if bytes.Equal(handshakeResponse.PeerID[:], utils.ConvertStringToByteArray(constant.CLIENT_ID)[:]) {
-		log.Fatal("handshake response peer id matches our peer id")
+		fmt.Println("handshake response peer id matches our peer id")
+		return err
 	}
 
 	fmt.Println("Handshake successful")
@@ -117,14 +118,22 @@ func ReceiveBitFieldMessage(conn net.Conn) (*model.Message, error) {
 	conn.SetDeadline(time.Now().Add(10 * time.Second))
 	defer conn.SetDeadline(time.Time{}) // Disable the deadline
 
+	// send the bitField message
+	bitFieldMessageRequest := model.Message{
+		MessageID: constant.BIT_FIELD,
+		Length:    0,
+		Payload:   []byte{0, 0, 0, 0, 0, 0, 0, 0},
+	}
+	conn.Write(bitFieldMessageRequest.Serialize())
+
 	// receive the bitField message
-	bitFieldMessage := model.DeserializeMessage(conn)
+	bitFieldMessageResponse := model.DeserializeMessage(conn)
 
 	// check that the message is a bit field message
-	if bitFieldMessage.MessageID != constant.BITFIELD {
+	if bitFieldMessageResponse.MessageID != constant.BIT_FIELD {
 		fmt.Println("Expected bit field message")
 		// log.Fatal("expected bit field message")
 	}
 
-	return bitFieldMessage, nil
+	return bitFieldMessageResponse, nil
 }
