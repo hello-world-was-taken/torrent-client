@@ -31,7 +31,7 @@ func (client *Client) Choke() {
 }
 
 func (client *Client) Unchoke() {
-	msg := Message{MessageID: constant.UNCHOKE, Payload: []byte{}}
+	msg := Message{MessageID: constant.UN_CHOKE, Payload: []byte{}}
 	_, err := client.Conn.Write(msg.Serialize())
 	if err != nil {
 		log.Fatalf("Error sending unchoke message to peer: %s", err)

@@ -4,24 +4,24 @@ import "time"
 
 // client ID is a 20 byte string
 const (
-	CLIENT_ID = "-TR2940-k8hj0wgej6ch"
+	// generate another client id
+	CLIENT_ID = "-TR3000-GvlaOyQjADkn"
 )
 
 // connection timeout is the time after which the connection is closed
 const (
-	CONNECTION_TIMEOUT = 3 * time.Second
+	CONNECTION_TIMEOUT = 10 * time.Second
 )
-
 
 // MessageID is the type of message that is sent/received over the wire
 const (
-	CHOKE = 0
-	UNCHOKE = 1
-	INTERESTED = 2
+	CHOKE          = 0
+	UN_CHOKE       = 1
+	INTERESTED     = 2
 	NOT_INTERESTED = 3
-	HAVE = 4
-	BITFIELD = 5
-	REQUEST = 6
-	PIECE = 7
-	CANCEL = 8
+	HAVE           = 4
+	BIT_FIELD      = 5
+	REQUEST        = 6
+	PIECE          = 7
+	CANCEL         = 8
 )
