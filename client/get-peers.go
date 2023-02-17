@@ -47,6 +47,16 @@ func buildTrackerRequestURLs(torrent *model.Torrent) ([]string, error) {
 	// list of urls
 	URLs := []string{}
 
+	// check if the announce is an http tracker
+	if utils.IsHTTPTracker(torrent.Announce) {
+		URL, err := url.Parse(torrent.Announce)
+		if err != nil {
+			return []string{}, err
+		}
+		URL.RawQuery = requestParams.Encode()
+		URLs = append(URLs, URL.String())
+	}
+
 	// go through all the trackers in the announce list and create a request for each one
 	// discard udp and only take http trackers
 	for _, tracker := range torrent.AnnounceList {
