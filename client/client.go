@@ -34,15 +34,18 @@ func ConnectToTracker() {
 	fmt.Println("Connecting to peers... Length: ", len(peers))
 	// ConnectToPeers(peers, torrent)
 	// create a client for each peer
-	for _, peer := range peers {
 
-		go ClientFactory(peer, torrent)
-		if err != nil {
-			log.Fatal("Error creating client for peer: ", peer.String())
-		}
+	StartDownload(torrent, peers)
 
-		// fmt.Println("------------  Bit Field  -------------> ", client.BitField)
-		// fmt.Println("------------  Choked State  -------------> ", client.ChokedState)
-	}
+	// for _, peer := range peers {
+
+	// 	go StartDownload(peer, torrent)
+	// 	if err != nil {
+	// 		log.Fatal("Error creating client for peer: ", peer.String())
+	// 	}
+
+	// 	// fmt.Println("------------  Bit Field  -------------> ", client.BitField)
+	// 	// fmt.Println("------------  Choked State  -------------> ", client.ChokedState)
+	// }
 
 }
