@@ -11,6 +11,7 @@ const (
 // connection timeout is the time after which the connection is closed
 const (
 	CONNECTION_TIMEOUT = 10 * time.Second
+	PIECE_DOWNLOAD_TIMEOUT = 30 * time.Second
 )
 
 // MessageID is the type of message that is sent/received over the wire
@@ -24,4 +25,11 @@ const (
 	REQUEST        = 6
 	PIECE          = 7
 	CANCEL         = 8
+)
+
+
+// batch block download 
+const (
+	MAX_BATCH_DOWNLOAD = 5
+	MAX_BLOCK_LENGTH = 16384 // 16KB
 )
