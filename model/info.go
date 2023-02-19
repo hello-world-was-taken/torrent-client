@@ -1,6 +1,8 @@
 package model
 
 import (
+	"log"
+
 	"torrent-dsp/utils"
 )
 
@@ -20,6 +22,11 @@ func (i *Info) PiecesToByteArray() [][20]byte {
 	pieces := []byte(i.Pieces)
 	piecesInByteArray := [][20]byte{}
 	
+	if len(pieces) % 20 != 0 {
+		log.Fatal("Error: pieces length is not a multiple of 20")
+		return nil
+	}
+
 	for i := 0; i < len(pieces); i += 20 {
 		curSlice := [20]byte{}
 		end := utils.CalcMin(i+20, len(pieces))
@@ -27,6 +34,14 @@ func (i *Info) PiecesToByteArray() [][20]byte {
 
 		piecesInByteArray = append(piecesInByteArray, curSlice)
 	}
+
+	// numHashes := len(pieces) / 20
+	// hashes := make([][20]byte, numHashes)
+
+	// for i := 0; i < numHashes; i++ {
+	// 	copy(hashes[i][:], pieces[i*20:(i+1)*20])
+	// }
+	// return hashes
 
 	return piecesInByteArray
 }
