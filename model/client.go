@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/binary"
+	"fmt"
 	"log"
 	"net"
 	"torrent-dsp/constant"
@@ -30,7 +31,7 @@ func (client *Client) Choke() {
 	}
 }
 
-func (client *Client) Unchoke() {
+func (client *Client) UnChoke() {
 	msg := Message{MessageID: constant.UN_CHOKE, Payload: []byte{}}
 	_, err := client.Conn.Write(msg.Serialize())
 	if err != nil {
@@ -38,7 +39,7 @@ func (client *Client) Unchoke() {
 	}
 }
 
-func (client *Client) Request(index uint32, begin uint32, length uint32) {
+func (client *Client) Request(index uint32, begin uint32, length uint32) error {
 	payload := make([]byte, 12)
 	binary.BigEndian.PutUint32(payload[0:4], index)
 	binary.BigEndian.PutUint32(payload[4:8], begin)
@@ -47,8 +48,11 @@ func (client *Client) Request(index uint32, begin uint32, length uint32) {
 
 	_, err := client.Conn.Write(msg.Serialize())
 	if err != nil {
-		log.Fatalf("Error sending request message to peer: %s", err)
+		fmt.Printf("Error sending request message to peer: %s", err)
+		return err
 	}
+
+	return nil
 }
 
 func (client *Client) Have(index uint32) {
