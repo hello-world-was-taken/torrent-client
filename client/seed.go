@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"torrent-dsp/model"
-	"torrent-dsp/client"
+	"torrent-dsp/constant"
 	// "time"
     // "encoding/binary"
     // "encoding/hex"
@@ -30,11 +30,19 @@ func SeederMain() {
 
 
 func handleConnection(conn net.Conn) {
-	handShake, err := ReceiveHandShake(conn)
+	_, err := ReceiveHandShake(conn)
 	if err != nil {
 		fmt.Println("Error receiving handshake")
 		return
 	}
+
+	// TODO: change byte to actual bit field of the data
+	SendBitField(conn, []byte{})
+
+	// listen to unchoke message
+	// listen to interested message
+
+	// listen to other request messages
 }
 
 
@@ -50,7 +58,7 @@ func ReceiveHandShake(conn net.Conn) (*model.HandShake, error) {
 	}
 
 	// deserialize the handshake response
-	handShake, err := client.DeserializeHandShake(buffer)
+	handShake, err := model.DeserializeHandShake(buffer)
 	if err != nil {
 		fmt.Println("Error deserializing handshake response")
 		return &model.HandShake{}, err
@@ -63,12 +71,17 @@ func ReceiveHandShake(conn net.Conn) (*model.HandShake, error) {
 
 func SendBitField(conn net.Conn, bitField []byte) error {
 	// send the bitfield
-	_, err := conn.Write(bitField)
+	msg := model.Message{MessageID: constant.REQUEST, Payload: bitField}
+	_, err := conn.Write(msg.Serialize())
 	if err != nil {
 		return err
 	}
 	return nil
 }
+
+
+// a function that generates bit field from a file
+
 
 
 // func maintainUpload() {
