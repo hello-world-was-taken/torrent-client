@@ -17,7 +17,7 @@ func ClientFactory(peer model.Peer, torrent model.Torrent) (*model.Client, error
 	if err != nil {
 		fmt.Println("Error creating client for peer: ", peer.String())
 		// log.Fatal(err)
-		return nil, nil
+		return nil, err
 	}
 
 	return client, nil
@@ -40,19 +40,20 @@ func createClient(peer model.Peer, torrent model.Torrent) (*model.Client, error)
 	}
 
 	// receive bit field message from the peer
-	fmt.Println("Getting Bit Field...")
+	// fmt.Println("Getting Bit Field...")
 	bitFieldMessage, err := ReceiveBitFieldMessage(conn)
-	fmt.Println("Received Bit field.")
 	if err != nil {
+		fmt.Println("Error receiving bit field message from peer: ", peer.String())
 		log.Fatal(err)
 	}
+	// fmt.Println("Received Bit field: ", bitFieldMessage.Payload, " from peer: ", peer.String(), " with length: ", len(bitFieldMessage.Payload))
 
 	// create a new client
 	client := &model.Client{
 		Peer:        peer,
 		BitField:    bitFieldMessage.Payload,
 		Conn:        conn,
-		ChokedState: 0,
+		ChokedState: constant.CHOKE,
 	}
 
 	return client, nil
@@ -73,11 +74,6 @@ func connectToPeer(peer model.Peer, torrent model.Torrent) (net.Conn, error) {
 }
 
 func ShakeHandWithPeer(torrent model.Torrent, peer model.Peer, clientID string, conn net.Conn) error {
-	// create a new connection to the peer
-	// conn, err := net.Dial("tcp", peer.String())
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
 
 	// convert the client id to a byte array
 	clientIDByte := [20]byte{}
@@ -91,7 +87,7 @@ func ShakeHandWithPeer(torrent model.Torrent, peer model.Peer, clientID string, 
 	}
 
 	// send the handshake request
-	fmt.Println("Sending handshake request to peer: ", peer.String())
+	// fmt.Println("Sending handshake request to peer: ", peer.String())
 	handshakeResponse, err := handshakeRequest.Send(conn)
 	if err != nil {
 		fmt.Println("Error sending handshake request to peer: ", peer.String())
@@ -118,16 +114,14 @@ func ReceiveBitFieldMessage(conn net.Conn) (*model.Message, error) {
 	conn.SetDeadline(time.Now().Add(10 * time.Second))
 	defer conn.SetDeadline(time.Time{}) // Disable the deadline
 
-	// send the bitField message
-	bitFieldMessageRequest := model.Message{
-		MessageID: constant.BIT_FIELD,
-		Length:    0,
-		Payload:   []byte{0, 0, 0, 0, 0, 0, 0, 0},
-	}
-	conn.Write(bitFieldMessageRequest.Serialize())
 
 	// receive the bitField message
-	bitFieldMessageResponse := model.DeserializeMessage(conn)
+	// fmt.Println("Deserializing bit field message...")
+	bitFieldMessageResponse, err := model.DeserializeMessage(conn)
+	if err != nil {
+		fmt.Println("Error receiving bit field message")
+		return nil, err
+	}
 
 	// check that the message is a bit field message
 	if bitFieldMessageResponse.MessageID != constant.BIT_FIELD {
