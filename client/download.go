@@ -55,7 +55,6 @@ func StartDownload(torrent model.Torrent, peers []model.Peer) {
 	donePieces := 0
 	for donePieces < len(torrent.Info.PiecesToByteArray()) {
 		res := <- resultChannel
-		// begin, end := t.calculateBoundsForPiece(res.index)
 		pieceSize := int(torrent.Info.PieceLength)
 		pieceStartIdx := res.Index * pieceSize
 		pieceEndIdx := utils.CalcMin(pieceStartIdx + pieceSize, int(torrent.Info.Length))
@@ -64,11 +63,13 @@ func StartDownload(torrent model.Torrent, peers []model.Peer) {
 		donePieces++
 
 		percent := float64(donePieces) / float64(len(torrent.Info.PiecesToByteArray())) * 100
-		numWorkers := runtime.NumGoroutine() - 1 // subtract 1 for main thread
-		log.Printf("(%0.2f%%) Downloaded piece #%d from %d peers\n", percent, res.Index, numWorkers)
+		numWorkers := runtime.NumGoroutine() - 1
+		log.Printf("Downloading... (%0.2f%%) Active Peers: %d\n", percent, numWorkers)
 	}
+
 	fmt.Println("Done downloading all pieces")
 	close(downloadChannel)
+
 	path := "downloaded_file"
 	outFile, err := os.Create(path)
 	if err != nil {
@@ -76,6 +77,7 @@ func StartDownload(torrent model.Torrent, peers []model.Peer) {
 		// return err
 	}
 	defer outFile.Close()
+
 	_, err = outFile.Write(buf)
 	if err != nil {
 		log.Fatalf("Failed to write to file: %s", path)
