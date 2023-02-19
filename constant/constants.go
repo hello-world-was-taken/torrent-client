@@ -33,3 +33,9 @@ const (
 	MAX_BATCH_DOWNLOAD = 5
 	MAX_BLOCK_LENGTH = 16384 // 16KB
 )
+
+
+// seeder port
+const (
+	SEEDER_PORT = 6881
+)
