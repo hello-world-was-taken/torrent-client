@@ -26,15 +26,21 @@ func (handShake *HandShake) Serialize() []byte {
 }
 
 // deserialize the handshake response byte array into a HandShake struct
-func DeserializeHandShake(buffer []byte) *HandShake {
+func DeserializeHandShake(buffer []byte) (*HandShake, error) {
+	fmt.Println("Deserializing handshake response: ", buffer)
 	handShake := &HandShake{}
 	pstrLength := int(buffer[0])
+	// check that the pstr is correct
+	if pstrLength != 19 {
+		fmt.Println("pstr length is not 19")
+		return &HandShake{}, fmt.Errorf("pstr length is not 19")
+	}
 	handShake.Pstr = string(buffer[1 : pstrLength+1])
 	// TODO: remove magic numbers
 	copy(handShake.InfoHash[:], buffer[28:48])
 	copy(handShake.PeerID[:], buffer[48:68])
 
-	return handShake
+	return handShake, nil
 }
 
 func (h *HandShake) Send(conn net.Conn) (*HandShake, error) {
@@ -57,7 +63,11 @@ func (h *HandShake) Send(conn net.Conn) (*HandShake, error) {
 	}
 
 	// deserialize the handshake response
-	handShake := DeserializeHandShake(buffer)
+	handShake, err := DeserializeHandShake(buffer)
+	if err != nil {
+		fmt.Println("Error deserializing handshake response")
+		return &HandShake{}, err
+	}
 
 	fmt.Println("Handshake sent successfully")
 	return handShake, nil
