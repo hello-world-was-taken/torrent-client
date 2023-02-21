@@ -37,8 +37,11 @@ func (client *Client) UnChoke() {
 	if err != nil {
 		log.Fatalf("Error sending unchoke message to peer: %s", err)
 	}
+	client.ChokedState = constant.UN_CHOKE
+
 }
 
+// length: 4 bytes, id: 1 byte, index: 4 bytes, begin: 4 bytes, length: 4 bytes -> total 17 bytes
 func (client *Client) Request(index uint32, begin uint32, length uint32) error {
 	payload := make([]byte, 12)
 	binary.BigEndian.PutUint32(payload[0:4], index)
