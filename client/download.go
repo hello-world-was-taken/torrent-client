@@ -1,16 +1,17 @@
 package client
 
 import (
-	"fmt"
-	"time"
+	// "crypto/sha1"
 	"encoding/binary"
+	"fmt"
 	"log"
-	"runtime"
 	"os"
+	"runtime"
+	"time"
 
+	"torrent-dsp/constant"
 	"torrent-dsp/model"
 	"torrent-dsp/utils"
-	"torrent-dsp/constant"
 )
 
 
@@ -33,7 +34,7 @@ func StartDownload(torrent model.Torrent, peers []model.Peer) {
 	piecesHashList := torrent.Info.PiecesToByteArray()
 	downloadChannel := make(chan *PieceRequest, len(piecesHashList))
 	resultChannel := make(chan *PieceResult)
-	fmt.Println("piecesHashList length ", len(piecesHashList))
+	// fmt.Println("piecesHashList length ", len(piecesHashList))
 	for idx, hash := range piecesHashList {
 		pieceSize := int(torrent.Info.PieceLength)
 		pieceStartIdx := idx * pieceSize
@@ -102,10 +103,10 @@ func DownloadFromPeer(peer model.Peer, torrent model.Torrent, downloadChannel ch
 
 
 	// send un_choke message to the peer and then send interested message
-	fmt.Println("Sending unchoke message to peer: ", client.Peer.String())
+	// fmt.Println("Sending unchoke message to peer: ", client.Peer.String())
 	client.UnChoke()
-	time.Sleep(2 * time.Second)
-	fmt.Println("Sending interested message to peer: ", client.Peer.String())
+	// time.Sleep(2 * time.Second)
+	// fmt.Println("Sending interested message to peer: ", client.Peer.String())
 	client.Interested()
 
 	// iterate over the download channel and download the pieces by checking the bitfield
@@ -114,8 +115,11 @@ func DownloadFromPeer(peer model.Peer, torrent model.Torrent, downloadChannel ch
 		// check if the piece is available in the bit field
 		if utils.BitOn(client.BitField, piece.Index) {
 			// send request message to the peer
-			fmt.Println("Sending request message to peer: ", client.Peer.String())
-			DownloadPiece(piece, client, downloadChannel, resultChannel, &torrent)
+			// fmt.Println("Sending request message to peer: ", client.Peer.String())
+			_, err = DownloadPiece(piece, client, downloadChannel, resultChannel, &torrent)
+			if err != nil {
+				return
+			}
 		} else {
 			downloadChannel <- piece
 		}
@@ -164,7 +168,7 @@ func DownloadPiece(piece *PieceRequest, client *model.Client, downloadChannel ch
 		// fmt.Println("Waiting for response from peer: ", client.Peer.String())
 		message, err := model.DeserializeMessage(client.Conn)
 		if err != nil {
-			fmt.Println("Error deserializing message from peer: ", err)
+			// fmt.Println("Error deserializing message from peer: ", err)
 			downloadChannel <- piece
 			return PieceResult{}, err
 		}
@@ -202,20 +206,17 @@ func DownloadPiece(piece *PieceRequest, client *model.Client, downloadChannel ch
 	}
 
 	// verify the piece
-	// if !utils.VerifyPieceHash(buffer, piece.Hash) {
+	// if !utils.BitHashChecker(buffer, piece.Hash) {
+	// 	fmt.Println("----> sha1",sha1.Sum(buffer))
+	// 	fmt.Println("----> piece hash",piece.Hash)
 	// 	fmt.Println("Piece hash verification failed for piece: ", piece.Index)
-	// 	return PieceResult{}, err
+	// 	return PieceResult{}, fmt.Errorf("Piece hash verification failed for piece: %d", piece.Index)
 	// }
 
 	// send the piece to the result channel
 	resultChannel <- &PieceResult{Index: piece.Index, Block: buffer}
 
 	return PieceResult{}, nil
-}
-
-
-func UploadPiece(piece PieceResult) {
-	// upload the piece
 }
 
 
@@ -244,7 +245,7 @@ func ParsePiece(index int, buf []byte, msg *model.Message) (int, error) {
 		fmt.Println("data problem: ", begin+len(data), " - ", len(buf))
 		return 0, fmt.Errorf("Data too long [%d] for offset %d with length %d", len(data), begin, len(buf))
 	}
-	fmt.Println("Successfully parsed piece")
+	// fmt.Println("Successfully parsed piece")
 	copy(buf[begin:], data)
 
 	// Return the length of the data and no error.
