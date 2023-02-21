@@ -9,7 +9,7 @@ import (
 
 	"torrent-dsp/constant"
 	"torrent-dsp/model"
-	"torrent-dsp/utils"
+	// "torrent-dsp/utils"
 )
 
 func ClientFactory(peer model.Peer, torrent model.Torrent) (*model.Client, error) {
@@ -30,12 +30,14 @@ func ClientFactory(peer model.Peer, torrent model.Torrent) (*model.Client, error
 func createClient(peer model.Peer, torrent model.Torrent) (*model.Client, error) {
 	conn, err := connectToPeer(peer, torrent)
 	if err != nil {
+		fmt.Println("Error connecting to peer: ", peer.String())
 		return nil, err
 	}
 
 	// shake hands with the peer
 	err = ShakeHandWithPeer(torrent, peer, constant.CLIENT_ID, conn)
 	if err != nil {
+		fmt.Println("Error shaking hands with peer: ", peer.String())
 		return nil, err
 	}
 
@@ -101,10 +103,10 @@ func ShakeHandWithPeer(torrent model.Torrent, peer model.Peer, clientID string, 
 	}
 
 	// check that the peer id in the response is different from ours
-	if bytes.Equal(handshakeResponse.PeerID[:], utils.ConvertStringToByteArray(constant.CLIENT_ID)[:]) {
-		fmt.Println("handshake response peer id matches our peer id")
-		return err
-	}
+	// if bytes.Equal(handshakeResponse.PeerID[:], utils.ConvertStringToByteArray(constant.CLIENT_ID)[:]) {
+	// 	fmt.Println("handshake response peer id matches our peer id")
+	// 	return err
+	// }
 
 	fmt.Println("Handshake successful")
 	return nil
