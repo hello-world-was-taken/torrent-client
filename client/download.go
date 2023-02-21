@@ -241,9 +241,10 @@ func ParsePiece(index int, buf []byte, msg *model.Message) (int, error) {
 	// Copy the data from the payload to the buffer.
 	data := msg.Payload[8:]
 	if begin+len(data) > len(buf) {
-		fmt.Println("data problem")
+		fmt.Println("data problem: ", begin+len(data), " - ", len(buf))
 		return 0, fmt.Errorf("Data too long [%d] for offset %d with length %d", len(data), begin, len(buf))
 	}
+	fmt.Println("Successfully parsed piece")
 	copy(buf[begin:], data)
 
 	// Return the length of the data and no error.
