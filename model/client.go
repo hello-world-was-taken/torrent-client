@@ -2,9 +2,11 @@ package model
 
 import (
 	"encoding/binary"
-	"fmt"
+	"errors"
+	// "fmt"
 	"log"
 	"net"
+	"syscall"
 	"torrent-dsp/constant"
 )
 
@@ -37,7 +39,7 @@ func (client *Client) UnChoke() {
 	if err != nil {
 		log.Fatalf("Error sending unchoke message to peer: %s", err)
 	}
-	client.ChokedState = constant.UN_CHOKE
+	// client.ChokedState = constant.UN_CHOKE
 
 }
 
@@ -51,7 +53,10 @@ func (client *Client) Request(index uint32, begin uint32, length uint32) error {
 
 	_, err := client.Conn.Write(msg.Serialize())
 	if err != nil {
-		fmt.Printf("Error sending request message to peer: %s", err)
+		if errors.Is(err, syscall.EPIPE) {
+			// fmt.Println("Peer disconnected")
+		}
+		// fmt.Printf("Error sending request message to peer: %s", err)
 		return err
 	}
 

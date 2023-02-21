@@ -32,6 +32,10 @@ func DeserializeMessage(conn net.Conn) (*Message, error) {
 	_, err := io.ReadFull(conn, length)
 	// _, err := conn.Read(length)
 	if err != nil {
+		if err == io.EOF {
+			fmt.Println("Connection closed")
+			return nil, err
+		}
 		fmt.Println("Error reading message length: %s", err)
 		return nil, err
 	}
@@ -60,9 +64,7 @@ func DeserializeMessage(conn net.Conn) (*Message, error) {
 
 	if msgLength == 1 {
 		// either choke, unchoke, interested, not interested
-		fmt.Println("payload: ", message.Payload)
 		message.MessageID = buffer[0]
-		fmt.Println("message id: ", message.MessageID)
 		return message, nil
 	}
 	message.Length = msgLength

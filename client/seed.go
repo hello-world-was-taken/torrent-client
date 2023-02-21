@@ -183,7 +183,7 @@ func ReceiveRequest(conn net.Conn) (*model.Message, error) {
 	// buffer := make([]byte, 17)
 	conn.SetDeadline(time.Now().Add(constant.PIECE_DOWNLOAD_TIMEOUT))
     defer conn.SetDeadline(time.Time{})
-	time.Sleep(1 * time.Second)
+	// time.Sleep(1 * time.Second)
 
 	requestMsg, err := model.DeserializeMessage(conn)
 	if err != nil {
@@ -203,7 +203,7 @@ func ReceiveRequest(conn net.Conn) (*model.Message, error) {
 
 func handleRequest(requestMsg model.Message, conn net.Conn) error {
 
-	file, err := os.Open("/Users/kemerhabesha/Desktop/torrent-dsp/debian-11.6.0-amd64-netinst.iso")
+	file, err := os.Open("/Users/kemerhabesha/Documents/Programming-Related/torrent-dsp/debian-11.6.0-amd64-netinst.iso")
 	defer file.Close()
 
 	// parse payload
@@ -228,7 +228,7 @@ func handleRequest(requestMsg model.Message, conn net.Conn) error {
 		return err
 	}
 
-	fmt.Println("Piece sent successfully")
+	// fmt.Println("Piece sent successfully")
 
 	return nil
 }
@@ -239,7 +239,7 @@ func SendPiece(conn net.Conn, piece []byte, index int, blockStart int) error {
 	binary.BigEndian.PutUint32(payload[0:4], uint32(index))
 	binary.BigEndian.PutUint32(payload[4:8], uint32(blockStart))
 	copy(payload[8:], piece[:])
-	fmt.Println("piece length SEEDER", len(piece))
+	// fmt.Println("piece length SEEDER", len(piece))
 	// for idx := 0; idx < len(piece); idx++ {
 	// 	payload[8+idx] = piece[idx]
 	// }

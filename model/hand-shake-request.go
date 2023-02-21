@@ -27,7 +27,7 @@ func (handShake *HandShake) Serialize() []byte {
 
 // deserialize the handshake response byte array into a HandShake struct
 func DeserializeHandShake(buffer []byte) (*HandShake, error) {
-	fmt.Println("Deserializing handshake response: ", buffer)
+	// fmt.Println("Deserializing handshake response: ", buffer)
 	handShake := &HandShake{}
 	pstrLength := int(buffer[0])
 	// check that the pstr is correct
