@@ -1,7 +1,7 @@
 package client
 
 import (
-	"fmt"
+	// "fmt"
 	"net/http"
 	"net/url"
 	"torrent-dsp/model"
@@ -81,11 +81,11 @@ func buildTrackerRequestURLs(torrent *model.Torrent) ([]string, error) {
 // go through each HTTP tracker requests until we get a response from one
 func getPeersFromTrackersHelper(URLs []string) ([]model.Peer, error) {
 	peers := []model.Peer{}
-	fmt.Println("Trying to get peers from HTTP trackers: Length: ", len(URLs))
+	// fmt.Println("Trying to get peers from HTTP trackers: Length: ", len(URLs))
 	for _, URL := range URLs {
 		response, err := getPeerFromURL(URL)
 		if err == nil && len(response) > 0 {
-			fmt.Println("Got peers from HTTP tracker: Length: ", len(response))
+			// fmt.Println("Got peers from HTTP tracker: Length: ", len(response))
 			for _, p := range response {
 				peers = append(peers, p)
 			}
@@ -93,7 +93,7 @@ func getPeersFromTrackersHelper(URLs []string) ([]model.Peer, error) {
 			// return response, nil
 		}
 
-		fmt.Println("Error getting peers from HTTP tracker: ", err)
+		// fmt.Println("Error getting peers from HTTP tracker: ", err)
 	}
 
 	return peers, nil
@@ -127,7 +127,7 @@ func getPeerFromURL(URL string) ([]model.Peer, error) {
 	// log the peers
 	// utils.LogPeers(peers)
 
-	fmt.Println("Retrieved peers successfully")
+	// fmt.Println("Retrieved peers successfully")
 	return peers, nil
 }
 
