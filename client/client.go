@@ -3,7 +3,8 @@ package client
 import (
 	"fmt"
 	"log"
-	// "net"
+	"net"
+	"time"
 
 	// "torrent-dsp/constant"
 	"torrent-dsp/model"
@@ -35,7 +36,14 @@ func ConnectToTracker() {
 	// ConnectToPeers(peers, torrent)
 	// create a client for each peer
 
-	StartDownload(torrent, peers)
+	go SeederMain()  // seed the file
+
+	peer := model.Peer{}
+	peer.IP = net.IP([]byte{127, 0, 0, 1})
+	peer.Port = 6881
+	peers = []model.Peer{peer}
+	time.Sleep(5 * time.Second)
+	StartDownload(torrent, peers)  // leech the file
 
 	// for _, peer := range peers {
 
