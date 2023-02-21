@@ -1,29 +1,27 @@
 package client
 
-
 import (
-	"net"
-	"log"
+	"encoding/binary"
 	"fmt"
+	"log"
+	"net"
 	"os"
 	"time"
-	"encoding/binary"
 
-	"torrent-dsp/model"
 	"torrent-dsp/constant"
+	"torrent-dsp/model"
+	"torrent-dsp/utils"
 	// "time"
-    // "encoding/binary"
-    // "encoding/hex"
+	// "encoding/binary"
+	// "encoding/hex"
 )
 
 func SeederMain() {
 	// start a server listening on port 6881
 	torrent, err := model.ParseTorrentFile("./torrent-files/debian-11.6.0-amd64-netinst.iso.torrent")
-	file, err := os.Open("/Users/kemerhabesha/Desktop/torrent-dsp/debian-11.6.0-amd64-netinst.iso")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer file.Close()
 
     ln, err := net.Listen("tcp", ":6881")
 
@@ -34,13 +32,13 @@ func SeederMain() {
     for {
         if conn, err := ln.Accept(); err == nil {
 			fmt.Println("Accepted connection")
-            go handleConnection(conn, torrent, file)
+            go handleConnection(conn, torrent)
         }
     }
 }
 
 
-func handleConnection(conn net.Conn, torrent model.Torrent, file *os.File) {
+func handleConnection(conn net.Conn, torrent model.Torrent) {
 	conn.SetDeadline(time.Now().Add(30 * time.Second))
 	defer conn.Close()
 	fmt.Println("Handling connection")
@@ -75,10 +73,19 @@ func handleConnection(conn net.Conn, torrent model.Torrent, file *os.File) {
 	fmt.Println("Received interested message")
 
 	// listen to other request messages
+	requestChannel := make(chan *model.Message, 100000)
 	for {
-		fmt.Println("Waiting for request...")
-		go ReceiveRequest(conn, file)
-		fmt.Println("Received request and sent piece")
+		// fmt.Println("Waiting for request...")
+		// conn.
+		requestMsg, err := ReceiveRequest(conn)
+		if err != nil {
+			log.Fatal("found an error while receiving a request seeder")
+			return
+		}
+		requestChannel <- requestMsg
+		fmt.Println("handling request")
+		go handleRequest(*<-requestChannel, conn)
+		// fmt.Println("Received request and sent piece")
 	}
 }
 
@@ -172,50 +179,72 @@ func ReceiveInterested(conn net.Conn) error {
 }
 
 
-func ReceiveRequest(conn net.Conn, file *os.File) error {
+func ReceiveRequest(conn net.Conn) (*model.Message, error) {
 	// buffer := make([]byte, 17)
 	conn.SetDeadline(time.Now().Add(constant.PIECE_DOWNLOAD_TIMEOUT))
     defer conn.SetDeadline(time.Time{})
+	time.Sleep(1 * time.Second)
 
 	requestMsg, err := model.DeserializeMessage(conn)
 	if err != nil {
 		fmt.Println("Error reading request message")
-		return err
+		return &model.Message{}, err
 	}
 
 	if err != nil {
 		fmt.Println("Error opening file")
-		return err
+		return &model.Message{}, err
 	}
+
+	return requestMsg, nil
+	
+}
+
+
+func handleRequest(requestMsg model.Message, conn net.Conn) error {
+
+	file, err := os.Open("/Users/kemerhabesha/Desktop/torrent-dsp/debian-11.6.0-amd64-netinst.iso")
+	defer file.Close()
 
 	// parse payload
 	if requestMsg.MessageID != constant.REQUEST {
 		fmt.Println("Error: received message is not a request")
 		return nil
 	}
-	_, begin, size := ParseRequestPayload(requestMsg.Payload)
+	index, begin, size, blockStart := ParseRequestPayload(requestMsg.Payload)
 
 	// read the piece from the file
-	piece := make([]byte, int64(begin))
-	_, err = file.ReadAt(piece, int64(size))
+	piece := make([]byte, int64(size))
+	_, err = file.ReadAt(piece, int64(begin))
 	if err != nil {
 		fmt.Println("Error reading piece from file")
 		return err
 	}
 
 	// send the piece
-	err = SendPiece(conn, piece)
+	err = SendPiece(conn, piece, index, blockStart)
 	if err != nil {
 		fmt.Println("Error sending piece")
 		return err
 	}
 
+	fmt.Println("Piece sent successfully")
+
 	return nil
 }
 
 
-func SendPiece(conn net.Conn, piece []byte) error {
-	msg := model.Message{MessageID: constant.PIECE, Payload: piece}
+func SendPiece(conn net.Conn, piece []byte, index int, blockStart int) error {
+	payload := make([]byte, 8+len(piece))
+	binary.BigEndian.PutUint32(payload[0:4], uint32(index))
+	binary.BigEndian.PutUint32(payload[4:8], uint32(blockStart))
+	copy(payload[8:], piece[:])
+	fmt.Println("piece length SEEDER", len(piece))
+	// for idx := 0; idx < len(piece); idx++ {
+	// 	payload[8+idx] = piece[idx]
+	// }
+
+	msg := model.Message{MessageID: constant.PIECE, Payload: payload}
 	_, err := conn.Write(msg.Serialize())
 	if err != nil {
 		fmt.Println("Error sending piece")
@@ -226,26 +255,20 @@ func SendPiece(conn net.Conn, piece []byte) error {
 }
 
 
-func ParseRequestPayload(payload []byte) (int, int, int) {
+func ParseRequestPayload(payload []byte) (int, int, int, int) {
 	index := int(binary.BigEndian.Uint32(payload[0:4]))
 	blockStart := int(binary.BigEndian.Uint32(payload[4:8]))
 	blockSize := int(binary.BigEndian.Uint32(payload[8:12]))
 	pieceSize := 262144
 	fileSize := 471859200
-	begin := index*pieceSize + blockStart
-	end := begin + blockSize
+	begin := index * pieceSize + blockStart
+	// end := begin + blockSize
+	end := utils.CalcMin(fileSize, begin + blockSize)
 
 	if end > fileSize {
 		end = fileSize
-		blockSize = end - begin
+		// blockSize = end - begin
 	}
-	// request := Request{
-	// 	Index:      index,
-	// 	BlockBegin: blockStart,
-	// 	Begin:      begin,
-	// 	End:        end,
-	// 	BlockSize:  blockSize,
-	// }
 
-	return index, begin, blockSize
+	return index, begin, blockSize, blockStart
 }
