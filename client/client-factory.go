@@ -3,7 +3,7 @@ package client
 import (
 	"bytes"
 	"fmt"
-	"log"
+	// "log"
 	"net"
 	"time"
 
@@ -30,14 +30,14 @@ func ClientFactory(peer model.Peer, torrent model.Torrent) (*model.Client, error
 func createClient(peer model.Peer, torrent model.Torrent) (*model.Client, error) {
 	conn, err := connectToPeer(peer, torrent)
 	if err != nil {
-		fmt.Println("Error connecting to peer: ", peer.String())
+		// fmt.Println("Error connecting to peer: ", peer.String())
 		return nil, err
 	}
 
 	// shake hands with the peer
 	err = ShakeHandWithPeer(torrent, peer, constant.CLIENT_ID, conn)
 	if err != nil {
-		fmt.Println("Error shaking hands with peer: ", peer.String())
+		// fmt.Println("Error shaking hands with peer: ", peer.String())
 		return nil, err
 	}
 
@@ -45,8 +45,9 @@ func createClient(peer model.Peer, torrent model.Torrent) (*model.Client, error)
 	// fmt.Println("Getting Bit Field...")
 	bitFieldMessage, err := ReceiveBitFieldMessage(conn)
 	if err != nil {
-		fmt.Println("Error receiving bit field message from peer: ", peer.String())
-		log.Fatal(err)
+		// fmt.Println("Error receiving bit field message from peer: ", peer.String())
+		// log.Fatal(err)
+		return &model.Client{}, err
 	}
 	// fmt.Println("Received Bit field: ", bitFieldMessage.Payload, " from peer: ", peer.String(), " with length: ", len(bitFieldMessage.Payload))
 
@@ -67,7 +68,7 @@ func connectToPeer(peer model.Peer, torrent model.Torrent) (net.Conn, error) {
 	conn, err := net.DialTimeout("tcp", peer.String(), constant.CONNECTION_TIMEOUT)
 	// TODO: close connection incase of error
 	if err != nil {
-		fmt.Println("Error connecting to peer: ", peer.String())
+		// fmt.Println("Error connecting to peer: ", peer.String())
 		// log.Fatal(err)
 		return nil, err
 	}
@@ -77,6 +78,9 @@ func connectToPeer(peer model.Peer, torrent model.Torrent) (net.Conn, error) {
 
 func ShakeHandWithPeer(torrent model.Torrent, peer model.Peer, clientID string, conn net.Conn) error {
 
+	conn.SetDeadline(time.Now().Add(10 * time.Second))
+	defer conn.SetDeadline(time.Time{}) // Disable the deadline
+	
 	// convert the client id to a byte array
 	clientIDByte := [20]byte{}
 	copy(clientIDByte[:], []byte(clientID))
@@ -92,13 +96,13 @@ func ShakeHandWithPeer(torrent model.Torrent, peer model.Peer, clientID string, 
 	// fmt.Println("Sending handshake request to peer: ", peer.String())
 	handshakeResponse, err := handshakeRequest.Send(conn)
 	if err != nil {
-		fmt.Println("Error sending handshake request to peer: ", peer.String())
+		// fmt.Println("Error sending handshake request to peer: ", peer.String())
 		return err
 	}
 
 	// check that the infohash in the response matches the infohash of the torrent
 	if !bytes.Equal(handshakeResponse.InfoHash[:], torrent.InfoHash[:]) {
-		fmt.Println("handshake response infohash does not match torrent infohash")
+		// fmt.Println("handshake response infohash does not match torrent infohash")
 		return err
 	}
 
@@ -108,7 +112,7 @@ func ShakeHandWithPeer(torrent model.Torrent, peer model.Peer, clientID string, 
 	// 	return err
 	// }
 
-	fmt.Println("Handshake successful")
+	// fmt.Println("Handshake successful")
 	return nil
 }
 
@@ -121,13 +125,14 @@ func ReceiveBitFieldMessage(conn net.Conn) (*model.Message, error) {
 	// fmt.Println("Deserializing bit field message...")
 	bitFieldMessageResponse, err := model.DeserializeMessage(conn)
 	if err != nil {
-		fmt.Println("Error receiving bit field message")
+		// fmt.Println("Error receiving bit field message")
 		return nil, err
 	}
 
 	// check that the message is a bit field message
 	if bitFieldMessageResponse.MessageID != constant.BIT_FIELD {
-		fmt.Println("Expected bit field message")
+		// fmt.Println("Expected bit field message")
+		return &model.Message{}, nil
 		// log.Fatal("expected bit field message")
 	}
 
