@@ -70,7 +70,7 @@ func StartDownload(torrent model.Torrent, peers []model.Peer) {
 	fmt.Println("Done downloading all pieces")
 	close(downloadChannel)
 
-	path := "downloaded_file"
+	path := "downloaded_file.iso"
 	outFile, err := os.Create(path)
 	if err != nil {
 		log.Fatalf("Failed to create file: %s", path)
@@ -102,7 +102,10 @@ func DownloadFromPeer(peer model.Peer, torrent model.Torrent, downloadChannel ch
 
 
 	// send un_choke message to the peer and then send interested message
+	fmt.Println("Sending unchoke message to peer: ", client.Peer.String())
 	client.UnChoke()
+	time.Sleep(2 * time.Second)
+	fmt.Println("Sending interested message to peer: ", client.Peer.String())
 	client.Interested()
 
 	// iterate over the download channel and download the pieces by checking the bitfield
@@ -111,6 +114,7 @@ func DownloadFromPeer(peer model.Peer, torrent model.Torrent, downloadChannel ch
 		// check if the piece is available in the bit field
 		if utils.BitOn(client.BitField, piece.Index) {
 			// send request message to the peer
+			fmt.Println("Sending request message to peer: ", client.Peer.String())
 			DownloadPiece(piece, client, downloadChannel, resultChannel, &torrent)
 		} else {
 			downloadChannel <- piece
@@ -139,6 +143,7 @@ func DownloadPiece(piece *PieceRequest, client *model.Client, downloadChannel ch
 
 	for totalDownloaded < piece.Length {
 
+		// fmt.Println("Client choked state: ", client.ChokedState)
 		if client.ChokedState != constant.CHOKE {
 			for blockDownloadCount < constant.MAX_BATCH_DOWNLOAD {
 				length := utils.CalcMin(blockLength, piece.Length - ( blockDownloadCount * blockLength ))
