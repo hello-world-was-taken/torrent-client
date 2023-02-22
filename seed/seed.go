@@ -12,11 +12,9 @@ import (
 	"torrent-dsp/constant"
 	"torrent-dsp/utils"
 	"torrent-dsp/model"
-	// "time"
-	// "encoding/binary"
-	// "encoding/hex"
 )
 
+// Handle peer requests for pieces
 func SeederMain() {
 	// start a server listening on port 6881
 	torrent, err := common.ParseTorrentFile("./torrent-files/debian-11.6.0-amd64-netinst.iso.torrent")
@@ -240,10 +238,6 @@ func SendPiece(conn net.Conn, piece []byte, index int, blockStart int) error {
 	binary.BigEndian.PutUint32(payload[0:4], uint32(index))
 	binary.BigEndian.PutUint32(payload[4:8], uint32(blockStart))
 	copy(payload[8:], piece[:])
-	// fmt.Println("piece length SEEDER", len(piece))
-	// for idx := 0; idx < len(piece); idx++ {
-	// 	payload[8+idx] = piece[idx]
-	// }
 
 	msg := model.Message{MessageID: constant.PIECE, Payload: payload}
 	_, err := conn.Write(msg.Serialize())
@@ -268,7 +262,7 @@ func ParseRequestPayload(payload []byte) (int, int, int, int) {
 
 	if end > fileSize {
 		end = fileSize
-		// blockSize = end - begin
+		blockSize = end - begin
 	}
 
 	return index, begin, blockSize, blockStart

@@ -81,19 +81,13 @@ func buildTrackerRequestURLs(torrent *model.Torrent) ([]string, error) {
 // go through each HTTP tracker requests until we get a response from one
 func getPeersFromTrackersHelper(URLs []string) ([]model.Peer, error) {
 	peers := []model.Peer{}
-	// fmt.Println("Trying to get peers from HTTP trackers: Length: ", len(URLs))
 	for _, URL := range URLs {
 		response, err := getPeerFromURL(URL)
 		if err == nil && len(response) > 0 {
-			// fmt.Println("Got peers from HTTP tracker: Length: ", len(response))
 			for _, p := range response {
 				peers = append(peers, p)
 			}
-			// fmt.Println("Got peers from HTTP tracker: ", URL)
-			// return response, nil
 		}
-
-		// fmt.Println("Error getting peers from HTTP tracker: ", err)
 	}
 
 	return peers, nil

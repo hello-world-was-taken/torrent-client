@@ -30,6 +30,7 @@ type PieceRequest struct {
 }
 
 
+// parse the torrent metadata and get a list of peers from the tracker
 func PrepareDownload(filename string) (model.Torrent, []model.Peer) {
 	// open torrent file from the current directory and parse it
 	torrent, err := common.ParseTorrentFile(filename)
@@ -56,6 +57,8 @@ func StartDownload(filename string) {
 	if err != nil {
 		log.Fatalf("Error creating output file: ", err)
 	}
+	defer outFile.Close()
+	
 	// load the cache from a file
 	piecesCache, err := LoadCache("downloaded_file.json")
 	if err != nil {
@@ -187,10 +190,8 @@ func DownloadPiece(piece *PieceRequest, client *model.Client, downloadChannel ch
 		}
 
 		// collect the response
-		// fmt.Println("Waiting for response from peer: ", client.Peer.String())
 		message, err := model.DeserializeMessage(client.Conn)
 		if err != nil {
-			// fmt.Println("Error deserializing message from peer: ", err)
 			downloadChannel <- piece
 			return PieceResult{}, err
 		}
@@ -202,18 +203,14 @@ func DownloadPiece(piece *PieceRequest, client *model.Client, downloadChannel ch
 		}
 
 		switch message.MessageID {
-		case constant.UN_CHOKE:
-			client.ChokedState = constant.UN_CHOKE
 		case constant.CHOKE:
 			client.ChokedState = constant.CHOKE
+		case constant.UN_CHOKE:
+			client.ChokedState = constant.UN_CHOKE
 		case constant.INTERESTED:
-		// 	ParseInterested(message)
-		// case constant.NOT_INTERESTED:
-		// 	ParseNotInterested(message)
-		// case constant.REQUEST:
-		// 	ParseRequest(message)
-		// case constant.CANCEL:
-		// 	ParseCancel(message)
+			ParseInterested(message)
+		case constant.NOT_INTERESTED:
+			ParseNotInterested(message)
 		case constant.HAVE:
 			index, err := ParseHave(message)
 			if err != nil {
@@ -221,6 +218,8 @@ func DownloadPiece(piece *PieceRequest, client *model.Client, downloadChannel ch
 				return PieceResult{}, err
 			}
 			utils.TurnBitOn(client.BitField, index)
+		case constant.REQUEST:
+			ParseRequest(message)
 		case constant.PIECE:
 			n, err := ParsePiece(piece.Index, buffer, message)
 			if err != nil {
@@ -230,6 +229,8 @@ func DownloadPiece(piece *PieceRequest, client *model.Client, downloadChannel ch
 			}
 			totalDownloaded += n
 			blockDownloadCount--
+		case constant.CANCEL:
+			ParseCancel(message)
 		}
 
 	}
@@ -246,6 +247,42 @@ func DownloadPiece(piece *PieceRequest, client *model.Client, downloadChannel ch
 	resultChannel <- &PieceResult{Index: piece.Index, Block: buffer}
 
 	return PieceResult{}, nil
+}
+
+
+func ParseInterested(msg *model.Message) {
+	// Check that the message is a INTERESTED message.
+	if msg.MessageID != constant.INTERESTED {
+		fmt.Errorf("Expected INTERESTED (ID %d), got ID %d", constant.INTERESTED, msg.MessageID)
+	}
+}
+
+
+func ParseNotInterested(msg *model.Message) {
+	// Check that the message is a NOT_INTERESTED message.
+	if msg.MessageID != constant.NOT_INTERESTED {
+		fmt.Errorf("Expected NOT_INTERESTED (ID %d), got ID %d", constant.NOT_INTERESTED, msg.MessageID)
+	}
+}
+
+
+func ParseHave(msg *model.Message) (int, error) {
+	if msg.MessageID != constant.HAVE {
+		return 0, fmt.Errorf("Expected HAVE (ID %d), got ID %d", constant.HAVE, msg.MessageID)
+	}
+
+	if len(msg.Payload) != 4 {
+		return 0, fmt.Errorf("Expected payload length 4, got length %d", len(msg.Payload))
+	}
+
+	index := int(binary.BigEndian.Uint32(msg.Payload))
+	
+	return index, nil
+}
+
+
+func ParseRequest(msg *model.Message) {
+	// TODO: spawn goroutine to handle request
 }
 
 
@@ -282,16 +319,9 @@ func ParsePiece(index int, buf []byte, msg *model.Message) (int, error) {
 }
 
 
-func ParseHave(msg *model.Message) (int, error) {
-	if msg.MessageID != constant.HAVE {
-		return 0, fmt.Errorf("Expected HAVE (ID %d), got ID %d", constant.HAVE, msg.MessageID)
+func ParseCancel(msg *model.Message) {
+	// Check that the message is a CANCEL message.
+	if msg.MessageID != constant.CANCEL {
+		fmt.Errorf("Expected CANCEL (ID %d), got ID %d", constant.CANCEL, msg.MessageID)
 	}
-
-	if len(msg.Payload) != 4 {
-		return 0, fmt.Errorf("Expected payload length 4, got length %d", len(msg.Payload))
-	}
-
-	index := int(binary.BigEndian.Uint32(msg.Payload))
-	
-	return index, nil
 }
