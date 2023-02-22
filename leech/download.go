@@ -1,7 +1,7 @@
 package leech
 
 import (
-	// "crypto/sha1"
+	"crypto/sha1"
 	"encoding/binary"
 	"fmt"
 	"log"
@@ -53,7 +53,7 @@ func StartDownload(filename string) {
 	torrent, peers := PrepareDownload(filename)
 
 	// create output file
-	outFile, err := os.Create("./downloads/downloaded_file.iso")
+	outFile, err := common.CreateFile(&torrent)
 	if err != nil {
 		log.Fatalf("Error creating output file: ", err)
 	}
@@ -79,7 +79,7 @@ func StartDownload(filename string) {
 		pieceEndIdx := utils.CalcMin(pieceStartIdx + pieceSize, int(torrent.Info.Length))
 		
 		// TODO: there might be an off by one error here		
-		downloadChannel <- &PieceRequest{Index: idx, Hash: hash, Length: pieceEndIdx - pieceStartIdx}
+		downloadChannel <- &PieceRequest{Index: idx, Hash: hash, Length: pieceEndIdx - pieceStartIdx + 1}
 	}
 
 	// start the download and upload goroutines
@@ -236,12 +236,9 @@ func DownloadPiece(piece *PieceRequest, client *model.Client, downloadChannel ch
 	}
 
 	// verify the piece
-	// if !utils.BitHashChecker(buffer, piece.Hash) {
-	// 	fmt.Println("----> sha1",sha1.Sum(buffer))
-	// 	fmt.Println("----> piece hash",piece.Hash)
-	// 	fmt.Println("Piece hash verification failed for piece: ", piece.Index)
-	// 	return PieceResult{}, fmt.Errorf("Piece hash verification failed for piece: %d", piece.Index)
-	// }
+	if !utils.BitHashChecker(buffer, piece.Hash) {
+		return PieceResult{}, fmt.Errorf("Piece hash verification failed for piece: %d", piece.Index)
+	}
 
 	// send the piece to the result channel
 	resultChannel <- &PieceResult{Index: piece.Index, Block: buffer}

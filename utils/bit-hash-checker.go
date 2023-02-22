@@ -8,5 +8,5 @@ import (
 
 func BitHashChecker(buf []byte, pieceHash [20]byte) bool {
 	hash := sha1.Sum(buf)
-	return bytes.Equal(hash[:], pieceHash[:])
+	return !bytes.Equal(hash[:], pieceHash[:])
 }
