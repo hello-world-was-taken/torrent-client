@@ -52,14 +52,14 @@ func StartDownload(filename string) {
 	torrent, peers := PrepareDownload(filename)
 
 	// create output file
-	outFile, err := common.CreateFile(&torrent)
+	outFile, filename, err := common.CreateFile(&torrent)
 	if err != nil {
 		log.Fatalf("Error creating output file: ", err)
 	}
 	defer outFile.Close()
 	
 	// load the cache from a file
-	piecesCache, err := LoadCache("downloaded_file.json")
+	piecesCache, err := LoadCache(outFile.Name() + ".json")
 	if err != nil {
 		// error loading file, assign pieces hash to an new map[int]bool
 		piecesCache = &model.PiecesCache{}
@@ -83,7 +83,7 @@ func StartDownload(filename string) {
 
 	// start the download and upload goroutines
 	for _, peer := range peers {
-		go DownloadFromPeer(peer, torrent, downloadChannel, resultChannel)
+		go DownloadFromPeer(peer, torrent, downloadChannel, resultChannel, piecesCache)
 	}
 
 
@@ -117,14 +117,14 @@ func StoreDownloadedPieces(donePieces int, torrent model.Torrent, resultChannel 
 
 		// update the cache
 		piecesCache.Pieces[res.Index] = true
-		SaveCache("downloaded_file.json", piecesCache)
+		SaveCache(outFile.Name() + ".json", piecesCache)
 
 		// TODO: do we need to store it on the buffer?
 		copy(buf[pieceStartIdx:pieceEndIdx], res.Block)
 		donePieces++
 
 		// print the progress
-		percent := float64(donePieces) / float64(len(torrent.Info.PiecesToByteArray())) * 100
+		percent := float64(len(piecesCache.Pieces)) / float64(len(torrent.Info.PiecesToByteArray())) * 100
 		numWorkers := runtime.NumGoroutine() - 1
 		log.Printf("Downloading... (%0.2f%%) Active Peers: %d\n", percent, numWorkers)
 	}
@@ -132,7 +132,7 @@ func StoreDownloadedPieces(donePieces int, torrent model.Torrent, resultChannel 
 }
 
 
-func DownloadFromPeer(peer model.Peer, torrent model.Torrent, downloadChannel chan *PieceRequest, resultChannel chan *PieceResult) {
+func DownloadFromPeer(peer model.Peer, torrent model.Torrent, downloadChannel chan *PieceRequest, resultChannel chan *PieceResult, piecesCache *model.PiecesCache) {
 	// create a client with the peer
 	client, err := ClientFactory(peer, torrent)
 	if err != nil {
@@ -146,14 +146,15 @@ func DownloadFromPeer(peer model.Peer, torrent model.Torrent, downloadChannel ch
 
 	// download the pieces the peer has
 	for piece := range downloadChannel {
-		if utils.BitOn(client.BitField, piece.Index) {
+		fmt.Println("Found from cache: ", !piecesCache.Pieces[piece.Index])
+		if !piecesCache.Pieces[piece.Index] && utils.BitOn(client.BitField, piece.Index) {
 			
 			// send request message to the peer
 			_, err = DownloadPiece(piece, client, downloadChannel, resultChannel, &torrent)
 			if err != nil {
 				return
 			}
-		} else {
+		} else if !piecesCache.Pieces[piece.Index] {
 			downloadChannel <- piece
 		}
 	}
