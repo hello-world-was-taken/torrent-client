@@ -17,6 +17,8 @@ func ConnectToTracker() {
 	// ubuntu-22.10-desktop-amd64.iso
 	// vlc-media-player
 	// 20A4F6FB1C21B5F5D76BAFDA3D64492125F7FAE2
+	// FD6E802C6F3EB1C70367487A55CE3FE782CBC6BC
+	// debian-11.6.0-amd64-netinst.iso
 	torrent, err := model.ParseTorrentFile("./torrent-files/debian-11.6.0-amd64-netinst.iso.torrent")
 	if err != nil {
 		log.Fatal(err)
