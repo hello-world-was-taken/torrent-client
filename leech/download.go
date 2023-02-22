@@ -8,12 +8,11 @@ import (
 	"runtime"
 	"time"
 
+	"torrent-dsp/common"
 	"torrent-dsp/constant"
 	"torrent-dsp/model"
 	"torrent-dsp/utils"
-	"torrent-dsp/common"
 )
-
 
 type PieceResult struct {
 	Index int    `bencode:"index"`
@@ -21,13 +20,11 @@ type PieceResult struct {
 	Block []byte `bencode:"block"`
 }
 
-
 type PieceRequest struct {
 	Index  int      `bencode:"index"`
 	Hash   [20]byte `bencode:"hash"`
 	Length int      `bencode:"length"`
 }
-
 
 // parse the torrent metadata and get a list of peers from the tracker
 func PrepareDownload(filename string) (model.Torrent, []model.Peer) {
@@ -46,7 +43,6 @@ func PrepareDownload(filename string) (model.Torrent, []model.Peer) {
 	return torrent, peers
 }
 
-
 func StartDownload(filename string) {
 
 	torrent, peers := PrepareDownload(filename)
@@ -57,7 +53,7 @@ func StartDownload(filename string) {
 		log.Fatalf("Error creating output file: ", err)
 	}
 	defer outFile.Close()
-	
+
 	// load the cache from a file
 	piecesCache, err := LoadCache(outFile.Name() + ".json")
 	if err != nil {
@@ -71,21 +67,18 @@ func StartDownload(filename string) {
 	piecesHashList := torrent.Info.PiecesToByteArray()
 	downloadChannel := make(chan *PieceRequest, len(piecesHashList))
 	resultChannel := make(chan *PieceResult)
-	// fmt.Println("piecesHashList length ", len(piecesHashList))
+
 	for idx, hash := range piecesHashList {
-		pieceSize := int(torrent.Info.PieceLength)
-		pieceStartIdx := idx * pieceSize
-		pieceEndIdx := utils.CalcMin(pieceStartIdx + pieceSize, int(torrent.Info.Length))
-		
-		// TODO: there might be an off by one error here		
-		downloadChannel <- &PieceRequest{Index: idx, Hash: hash, Length: pieceEndIdx - pieceStartIdx + 1}
+		length := torrent.CalcRequestSize(idx)
+
+		// TODO: there might be an off by one error here
+		downloadChannel <- &PieceRequest{Index: idx, Hash: hash, Length: length}
 	}
 
 	// start the download and upload goroutines
 	for _, peer := range peers {
 		go DownloadFromPeer(peer, torrent, downloadChannel, resultChannel, piecesCache)
 	}
-
 
 	// TODO: this needs to be changed
 	// Collect results into a buffer until full
@@ -100,10 +93,10 @@ func StartDownload(filename string) {
 }
 
 func StoreDownloadedPieces(donePieces int, torrent model.Torrent, resultChannel chan *PieceResult, err error, outFile *os.File, piecesCache *model.PiecesCache, buf []byte) {
-	
+
 	for len(piecesCache.Pieces) < len(torrent.Info.PiecesToByteArray()) {
 		res := <-resultChannel
-		
+
 		// calculate the start and end index of the piece
 		pieceSize := int(torrent.Info.PieceLength)
 		pieceStartIdx := res.Index * pieceSize
@@ -117,7 +110,7 @@ func StoreDownloadedPieces(donePieces int, torrent model.Torrent, resultChannel 
 
 		// update the cache
 		piecesCache.Pieces[res.Index] = true
-		SaveCache(outFile.Name() + ".json", piecesCache)
+		SaveCache(outFile.Name()+".json", piecesCache)
 
 		// TODO: do we need to store it on the buffer?
 		copy(buf[pieceStartIdx:pieceEndIdx], res.Block)
@@ -130,7 +123,6 @@ func StoreDownloadedPieces(donePieces int, torrent model.Torrent, resultChannel 
 	}
 	return
 }
-
 
 func DownloadFromPeer(peer model.Peer, torrent model.Torrent, downloadChannel chan *PieceRequest, resultChannel chan *PieceResult, piecesCache *model.PiecesCache) {
 	// create a client with the peer
@@ -147,44 +139,52 @@ func DownloadFromPeer(peer model.Peer, torrent model.Torrent, downloadChannel ch
 	// download the pieces the peer has
 	for piece := range downloadChannel {
 		fmt.Println("Found from cache: ", !piecesCache.Pieces[piece.Index])
-		if !piecesCache.Pieces[piece.Index] && utils.BitOn(client.BitField, piece.Index) {
-			
+		_, ok := piecesCache.Pieces[piece.Index]
+		
+		if !ok && utils.BitOn(client.BitField, piece.Index) {
+
 			// send request message to the peer
 			_, err = DownloadPiece(piece, client, downloadChannel, resultChannel, &torrent)
 			if err != nil {
+				downloadChannel <- piece
 				return
 			}
-		} else if !piecesCache.Pieces[piece.Index] {
+		} else if !ok {
 			downloadChannel <- piece
 		}
 	}
 }
 
-
 func DownloadPiece(piece *PieceRequest, client *model.Client, downloadChannel chan *PieceRequest, resultChannel chan *PieceResult, torrent *model.Torrent) (PieceResult, error) {
-	
+
 	// set the deadline for the connection
 	client.Conn.SetDeadline(time.Now().Add(constant.PIECE_DOWNLOAD_TIMEOUT))
-    defer client.Conn.SetDeadline(time.Time{})
+	defer client.Conn.SetDeadline(time.Time{})
 
 	totalDownloaded := 0
+	requested := 0
 	blockDownloadCount := 0
 	blockLength := constant.MAX_BLOCK_LENGTH
+	fmt.Println("Downloading piece: ", piece.Index, piece.Length, torrent.Info.PieceLength)
 	buffer := make([]byte, piece.Length)
 
 	for totalDownloaded < piece.Length {
 
 		if client.ChokedState != constant.CHOKE {
 			for blockDownloadCount < constant.MAX_BATCH_DOWNLOAD {
-				length := utils.CalcMin(blockLength, piece.Length - ( blockDownloadCount * blockLength ))
+				length := blockLength
+				// Last block might be shorter than the typical block
+				if piece.Length-requested < blockLength {
+					length = piece.Length - requested
+				}
 
 				// send request message to the peer
-				err := client.Request(uint32(piece.Index), uint32(blockDownloadCount * blockLength), uint32(length))
+				err := client.Request(uint32(piece.Index), uint32(requested), uint32(length))
 				if err != nil {
 					downloadChannel <- piece
 					return PieceResult{}, err
 				}
-
+				requested += length
 				blockDownloadCount++
 			}
 		}
@@ -195,7 +195,7 @@ func DownloadPiece(piece *PieceRequest, client *model.Client, downloadChannel ch
 			downloadChannel <- piece
 			return PieceResult{}, err
 		}
-	
+
 		// keep alive
 		if message == nil {
 			downloadChannel <- piece
@@ -246,7 +246,6 @@ func DownloadPiece(piece *PieceRequest, client *model.Client, downloadChannel ch
 	return PieceResult{}, nil
 }
 
-
 func ParseInterested(msg *model.Message) {
 	// Check that the message is a INTERESTED message.
 	if msg.MessageID != constant.INTERESTED {
@@ -254,14 +253,12 @@ func ParseInterested(msg *model.Message) {
 	}
 }
 
-
 func ParseNotInterested(msg *model.Message) {
 	// Check that the message is a NOT_INTERESTED message.
 	if msg.MessageID != constant.NOT_INTERESTED {
 		fmt.Errorf("Expected NOT_INTERESTED (ID %d), got ID %d", constant.NOT_INTERESTED, msg.MessageID)
 	}
 }
-
 
 func ParseHave(msg *model.Message) (int, error) {
 	if msg.MessageID != constant.HAVE {
@@ -273,15 +270,13 @@ func ParseHave(msg *model.Message) (int, error) {
 	}
 
 	index := int(binary.BigEndian.Uint32(msg.Payload))
-	
+
 	return index, nil
 }
-
 
 func ParseRequest(msg *model.Message) {
 	// TODO: spawn goroutine to handle request
 }
-
 
 func ParsePiece(index int, buf []byte, msg *model.Message) (int, error) {
 
@@ -314,7 +309,6 @@ func ParsePiece(index int, buf []byte, msg *model.Message) (int, error) {
 	// Return the length of the data and no error.
 	return len(data), nil
 }
-
 
 func ParseCancel(msg *model.Message) {
 	// Check that the message is a CANCEL message.

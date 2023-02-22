@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"bytes"
 	"crypto/sha1"
 )
@@ -8,5 +9,9 @@ import (
 
 func BitHashChecker(buf []byte, pieceHash [20]byte) bool {
 	hash := sha1.Sum(buf)
-	return !bytes.Equal(hash[:], pieceHash[:])
+	if bytes.Equal(hash[:], pieceHash[:]) {
+		return true
+	}
+	fmt.Println("Hash mismatch")
+	return false
 }
