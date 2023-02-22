@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime"
 	"time"
+	"net"
 
 	"torrent-dsp/common"
 	"torrent-dsp/constant"
@@ -39,6 +40,8 @@ func PrepareDownload(filename string) (model.Torrent, []model.Peer) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	peers = []model.Peer{ {IP: net.IP([]byte{127, 0, 0, 1}), Port: 6881} }
 
 	return torrent, peers
 }
@@ -139,9 +142,9 @@ func DownloadFromPeer(peer model.Peer, torrent model.Torrent, downloadChannel ch
 	// download the pieces the peer has
 	for piece := range downloadChannel {
 		fmt.Println("Found from cache: ", !piecesCache.Pieces[piece.Index])
-		_, ok := piecesCache.Pieces[piece.Index]
+		// _, ok := piecesCache.Pieces[piece.Index]
 		
-		if !ok && utils.BitOn(client.BitField, piece.Index) {
+		if utils.BitOn(client.BitField, piece.Index) {
 
 			// send request message to the peer
 			_, err = DownloadPiece(piece, client, downloadChannel, resultChannel, &torrent)
@@ -149,7 +152,7 @@ func DownloadFromPeer(peer model.Peer, torrent model.Torrent, downloadChannel ch
 				downloadChannel <- piece
 				return
 			}
-		} else if !ok {
+		} else {
 			downloadChannel <- piece
 		}
 	}
@@ -165,13 +168,13 @@ func DownloadPiece(piece *PieceRequest, client *model.Client, downloadChannel ch
 	requested := 0
 	blockDownloadCount := 0
 	blockLength := constant.MAX_BLOCK_LENGTH
-	fmt.Println("Downloading piece: ", piece.Index, piece.Length, torrent.Info.PieceLength)
+	// fmt.Println("Downloading piece: ", piece.Index, piece.Length, torrent.Info.PieceLength)
 	buffer := make([]byte, piece.Length)
 
 	for totalDownloaded < piece.Length {
-
+		fmt.Println("Downloading block: ", totalDownloaded, piece.Length)
 		if client.ChokedState != constant.CHOKE {
-			for blockDownloadCount < constant.MAX_BATCH_DOWNLOAD {
+			for blockDownloadCount < constant.MAX_BATCH_DOWNLOAD && requested < piece.Length {
 				length := blockLength
 				// Last block might be shorter than the typical block
 				if piece.Length-requested < blockLength {

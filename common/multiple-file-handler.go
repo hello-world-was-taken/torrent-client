@@ -72,7 +72,7 @@ func CreateOrOpenFile(filename string) (*os.File, error) {
 		return file, nil
 	}
 
-	file, err := os.Open(filename)
+	file, err := os.OpenFile(filename, os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Println("error opening file")
 		return nil, err

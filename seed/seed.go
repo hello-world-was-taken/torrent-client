@@ -1,4 +1,4 @@
-package leech
+package seed
 
 import (
 	"encoding/binary"
@@ -72,19 +72,13 @@ func handleConnection(conn net.Conn, torrent model.Torrent) {
 	fmt.Println("Received interested message")
 
 	// listen to other request messages
-	requestChannel := make(chan *model.Message, 100000)
 	for {
-		// fmt.Println("Waiting for request...")
-		// conn.
 		requestMsg, err := ReceiveRequest(conn)
 		if err != nil {
 			log.Fatal("found an error while receiving a request seeder")
 			return
 		}
-		requestChannel <- requestMsg
-		fmt.Println("handling request")
-		go handleRequest(*<-requestChannel, conn)
-		// fmt.Println("Received request and sent piece")
+		go handleRequest(*requestMsg, conn)
 	}
 }
 
@@ -202,7 +196,7 @@ func ReceiveRequest(conn net.Conn) (*model.Message, error) {
 
 func handleRequest(requestMsg model.Message, conn net.Conn) error {
 
-	file, err := os.Open("/Users/kemerhabesha/Documents/Programming-Related/torrent-dsp/debian-11.6.0-amd64-netinst.iso")
+	file, err := os.Open("/Users/kemerhabesha/Documents/Programming-Related/torrent-dsp/downloads/debian-11.6.0-amd64-netinst.iso")
 	defer file.Close()
 
 	// parse payload
@@ -219,7 +213,7 @@ func handleRequest(requestMsg model.Message, conn net.Conn) error {
 		fmt.Println("Error reading piece from file")
 		return err
 	}
-
+	fmt.Println("Piece read successfully")
 	// send the piece
 	err = SendPiece(conn, piece, index, blockStart)
 	if err != nil {
@@ -260,6 +254,9 @@ func ParseRequestPayload(payload []byte) (int, int, int, int) {
 	// end := begin + blockSize
 	end := utils.CalcMin(fileSize, begin + blockSize)
 
+	if blockSize == 0 {
+		fmt.Println("Error: block size is 0")
+	}
 	if end > fileSize {
 		end = fileSize
 		blockSize = end - begin
