@@ -70,6 +70,7 @@ func handleConnection(conn net.Conn, torrent model.Torrent) {
 	// listen to interested message
 	ReceiveInterested(conn)
 	fmt.Println("Received interested message")
+	SendUnchoke(conn)
 
 	// listen to other request messages
 	for {
@@ -263,4 +264,14 @@ func ParseRequestPayload(payload []byte) (int, int, int, int) {
 	}
 
 	return index, begin, blockSize, blockStart
+}
+
+
+func SendUnchoke(conn net.Conn) {
+	msg := model.Message{MessageID: constant.UN_CHOKE, Payload: []byte{}}
+	_, err := conn.Write(msg.Serialize())
+	if err != nil {
+		log.Fatalf("Error sending unchoke message to peer: %s", err)
+	}
+
 }
