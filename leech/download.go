@@ -1,4 +1,4 @@
-package client
+package leech
 
 import (
 	// "crypto/sha1"
@@ -12,6 +12,7 @@ import (
 	"torrent-dsp/constant"
 	"torrent-dsp/model"
 	"torrent-dsp/utils"
+	"torrent-dsp/common"
 )
 
 
@@ -29,7 +30,26 @@ type PieceRequest struct {
 }
 
 
-func StartDownload(torrent model.Torrent, peers []model.Peer) {
+func PrepareDownload(filename string) (model.Torrent, []model.Peer) {
+	// open torrent file from the current directory and parse it
+	torrent, err := common.ParseTorrentFile(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// get a list of peers from the tracker
+	peers, err := GetPeersFromTrackers(&torrent)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return torrent, peers
+}
+
+
+func StartDownload(filename string) {
+
+	torrent, peers := PrepareDownload(filename)
 
 	// create output file
 	outFile, err := os.Create("./downloads/downloaded_file.iso")
@@ -69,52 +89,44 @@ func StartDownload(torrent model.Torrent, peers []model.Peer) {
 	// Collect results into a buffer until full
 	buf := make([]byte, torrent.Info.Length)
 	donePieces := 0
-	for donePieces < len(torrent.Info.PiecesToByteArray()) {
-		res := <- resultChannel
-		pieceSize := int(torrent.Info.PieceLength)
-		pieceStartIdx := res.Index * pieceSize
-		pieceEndIdx := utils.CalcMin(pieceStartIdx + pieceSize, int(torrent.Info.Length))
 
-
-		// write to the output file
-		_, err = outFile.WriteAt(res.Block, int64(pieceStartIdx))
-		if err != nil {
-			log.Fatalf("Failed to write to file: %s", "downloaded_file.iso")
-			return
-		}
-
-		// update the download metadata of the downloaded files
-		piecesCache.Pieces[res.Index] = true
-		SaveCache("downloaded_file.json", piecesCache)
-
-		copy(buf[pieceStartIdx:pieceEndIdx], res.Block)
-		donePieces++
-
-		percent := float64(donePieces) / float64(len(torrent.Info.PiecesToByteArray())) * 100
-		numWorkers := runtime.NumGoroutine() - 1
-		log.Printf("Downloading... (%0.2f%%) Active Peers: %d\n", percent, numWorkers)
-	}
+	StoreDownloadedPieces(donePieces, torrent, resultChannel, err, outFile, piecesCache, buf)
 
 	fmt.Println("Done downloading all pieces")
 	close(downloadChannel)
 
-	// path := "downloaded_file.iso"
-	// outFile, err := os.Create(path)
-	// if err != nil {
-	// 	log.Fatalf("Failed to create file: %s", path)
-	// 	// return err
-	// }
-	// defer outFile.Close()
+}
 
-	// _, err = outFile.Write(buf)
-	// if err != nil {
-	// 	log.Fatalf("Failed to write to file: %s", path)
-	// 	// return err
-	// }
-	// return nil
+func StoreDownloadedPieces(donePieces int, torrent model.Torrent, resultChannel chan *PieceResult, err error, outFile *os.File, piecesCache *model.PiecesCache, buf []byte) {
+	
+	for donePieces < len(torrent.Info.PiecesToByteArray()) {
+		res := <-resultChannel
+		
+		// calculate the start and end index of the piece
+		pieceSize := int(torrent.Info.PieceLength)
+		pieceStartIdx := res.Index * pieceSize
+		pieceEndIdx := utils.CalcMin(pieceStartIdx+pieceSize, int(torrent.Info.Length))
 
-	// return buf, nil
+		// prepare output file
+		_, err = outFile.WriteAt(res.Block, int64(pieceStartIdx))
+		if err != nil {
+			log.Fatalf("Failed to write to file: %s", "downloaded_file.iso")
+		}
 
+		// update the cache
+		piecesCache.Pieces[res.Index] = true
+		SaveCache("downloaded_file.json", piecesCache)
+
+		// TODO: do we need to store it on the buffer?
+		copy(buf[pieceStartIdx:pieceEndIdx], res.Block)
+		donePieces++
+
+		// print the progress
+		percent := float64(donePieces) / float64(len(torrent.Info.PiecesToByteArray())) * 100
+		numWorkers := runtime.NumGoroutine() - 1
+		log.Printf("Downloading... (%0.2f%%) Active Peers: %d\n", percent, numWorkers)
+	}
+	return
 }
 
 
@@ -125,24 +137,16 @@ func DownloadFromPeer(peer model.Peer, torrent model.Torrent, downloadChannel ch
 		fmt.Printf("Failed to create a client with peer %s", peer.String())
 		return
 	}
-	// fmt.Println("Printing bit field... ")
-	// fmt.Println("bit field length ", client.BitField)
 
-
-	// send un_choke message to the peer and then send interested message
-	// fmt.Println("Sending unchoke message to peer: ", client.Peer.String())
+	// prepare for download
 	client.UnChoke()
-	// time.Sleep(2 * time.Second)
-	// fmt.Println("Sending interested message to peer: ", client.Peer.String())
 	client.Interested()
 
-	// iterate over the download channel and download the pieces by checking the bitfield
+	// download the pieces the peer has
 	for piece := range downloadChannel {
-		// fmt.Println("Downloading piece: ", piece.Index)
-		// check if the piece is available in the bit field
 		if utils.BitOn(client.BitField, piece.Index) {
+			
 			// send request message to the peer
-			// fmt.Println("Sending request message to peer: ", client.Peer.String())
 			_, err = DownloadPiece(piece, client, downloadChannel, resultChannel, &torrent)
 			if err != nil {
 				return
@@ -151,18 +155,12 @@ func DownloadFromPeer(peer model.Peer, torrent model.Torrent, downloadChannel ch
 			downloadChannel <- piece
 		}
 	}
-
-
-	
-
-	// start the download and upload goroutines
-	// go DownloadPiece(peer, downloadChannel, resultChannel)
-	// go UploadPiece(peer, resultChannel)
 }
 
 
 func DownloadPiece(piece *PieceRequest, client *model.Client, downloadChannel chan *PieceRequest, resultChannel chan *PieceResult, torrent *model.Torrent) (PieceResult, error) {
 	
+	// set the deadline for the connection
 	client.Conn.SetDeadline(time.Now().Add(constant.PIECE_DOWNLOAD_TIMEOUT))
     defer client.Conn.SetDeadline(time.Time{})
 
@@ -171,10 +169,8 @@ func DownloadPiece(piece *PieceRequest, client *model.Client, downloadChannel ch
 	blockLength := constant.MAX_BLOCK_LENGTH
 	buffer := make([]byte, piece.Length)
 
-
 	for totalDownloaded < piece.Length {
 
-		// fmt.Println("Client choked state: ", client.ChokedState)
 		if client.ChokedState != constant.CHOKE {
 			for blockDownloadCount < constant.MAX_BATCH_DOWNLOAD {
 				length := utils.CalcMin(blockLength, piece.Length - ( blockDownloadCount * blockLength ))
@@ -182,7 +178,6 @@ func DownloadPiece(piece *PieceRequest, client *model.Client, downloadChannel ch
 				// send request message to the peer
 				err := client.Request(uint32(piece.Index), uint32(blockDownloadCount * blockLength), uint32(length))
 				if err != nil {
-					// fmt.Println("Error sending request message to peer: ", client.Peer.String())
 					downloadChannel <- piece
 					return PieceResult{}, err
 				}
@@ -211,6 +206,14 @@ func DownloadPiece(piece *PieceRequest, client *model.Client, downloadChannel ch
 			client.ChokedState = constant.UN_CHOKE
 		case constant.CHOKE:
 			client.ChokedState = constant.CHOKE
+		case constant.INTERESTED:
+		// 	ParseInterested(message)
+		// case constant.NOT_INTERESTED:
+		// 	ParseNotInterested(message)
+		// case constant.REQUEST:
+		// 	ParseRequest(message)
+		// case constant.CANCEL:
+		// 	ParseCancel(message)
 		case constant.HAVE:
 			index, err := ParseHave(message)
 			if err != nil {
@@ -218,7 +221,6 @@ func DownloadPiece(piece *PieceRequest, client *model.Client, downloadChannel ch
 				return PieceResult{}, err
 			}
 			utils.TurnBitOn(client.BitField, index)
-			// client.BitField[index] = 1
 		case constant.PIECE:
 			n, err := ParsePiece(piece.Index, buffer, message)
 			if err != nil {

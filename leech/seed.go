@@ -1,4 +1,4 @@
-package client
+package leech
 
 import (
 	"encoding/binary"
@@ -8,9 +8,10 @@ import (
 	"os"
 	"time"
 
+	"torrent-dsp/common"
 	"torrent-dsp/constant"
-	"torrent-dsp/model"
 	"torrent-dsp/utils"
+	"torrent-dsp/model"
 	// "time"
 	// "encoding/binary"
 	// "encoding/hex"
@@ -18,7 +19,7 @@ import (
 
 func SeederMain() {
 	// start a server listening on port 6881
-	torrent, err := model.ParseTorrentFile("./torrent-files/debian-11.6.0-amd64-netinst.iso.torrent")
+	torrent, err := common.ParseTorrentFile("./torrent-files/debian-11.6.0-amd64-netinst.iso.torrent")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,7 +40,7 @@ func SeederMain() {
 
 
 func handleConnection(conn net.Conn, torrent model.Torrent) {
-	conn.SetDeadline(time.Now().Add(30 * time.Second))
+	conn.SetDeadline(time.Now().Add(constant.PIECE_UPLOAD_TIMEOUT))
 	defer conn.Close()
 	fmt.Println("Handling connection")
 	fmt.Println()
@@ -181,7 +182,7 @@ func ReceiveInterested(conn net.Conn) error {
 
 func ReceiveRequest(conn net.Conn) (*model.Message, error) {
 	// buffer := make([]byte, 17)
-	conn.SetDeadline(time.Now().Add(constant.PIECE_DOWNLOAD_TIMEOUT))
+	conn.SetDeadline(time.Now().Add(constant.PIECE_UPLOAD_TIMEOUT))
     defer conn.SetDeadline(time.Time{})
 	// time.Sleep(1 * time.Second)
 

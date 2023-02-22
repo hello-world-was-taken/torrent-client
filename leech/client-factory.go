@@ -1,22 +1,17 @@
-package client
+package leech
 
 import (
 	"bytes"
-	"fmt"
-	// "log"
 	"net"
 	"time"
 
 	"torrent-dsp/constant"
 	"torrent-dsp/model"
-	// "torrent-dsp/utils"
 )
 
 func ClientFactory(peer model.Peer, torrent model.Torrent) (*model.Client, error) {
 	client, err := createClient(peer, torrent)
 	if err != nil {
-		fmt.Println("Error creating client for peer: ", peer.String())
-		// log.Fatal(err)
 		return nil, err
 	}
 
@@ -30,26 +25,20 @@ func ClientFactory(peer model.Peer, torrent model.Torrent) (*model.Client, error
 func createClient(peer model.Peer, torrent model.Torrent) (*model.Client, error) {
 	conn, err := connectToPeer(peer, torrent)
 	if err != nil {
-		// fmt.Println("Error connecting to peer: ", peer.String())
 		return nil, err
 	}
 
 	// shake hands with the peer
 	err = ShakeHandWithPeer(torrent, peer, constant.CLIENT_ID, conn)
 	if err != nil {
-		// fmt.Println("Error shaking hands with peer: ", peer.String())
 		return nil, err
 	}
 
 	// receive bit field message from the peer
-	// fmt.Println("Getting Bit Field...")
 	bitFieldMessage, err := ReceiveBitFieldMessage(conn)
 	if err != nil {
-		// fmt.Println("Error receiving bit field message from peer: ", peer.String())
-		// log.Fatal(err)
 		return &model.Client{}, err
 	}
-	// fmt.Println("Received Bit field: ", bitFieldMessage.Payload, " from peer: ", peer.String(), " with length: ", len(bitFieldMessage.Payload))
 
 	// create a new client
 	client := &model.Client{
@@ -66,10 +55,7 @@ func createClient(peer model.Peer, torrent model.Torrent) (*model.Client, error)
 func connectToPeer(peer model.Peer, torrent model.Torrent) (net.Conn, error) {
 
 	conn, err := net.DialTimeout("tcp", peer.String(), constant.CONNECTION_TIMEOUT)
-	// TODO: close connection incase of error
 	if err != nil {
-		// fmt.Println("Error connecting to peer: ", peer.String())
-		// log.Fatal(err)
 		return nil, err
 	}
 
@@ -78,8 +64,8 @@ func connectToPeer(peer model.Peer, torrent model.Torrent) (net.Conn, error) {
 
 func ShakeHandWithPeer(torrent model.Torrent, peer model.Peer, clientID string, conn net.Conn) error {
 
-	conn.SetDeadline(time.Now().Add(10 * time.Second))
-	defer conn.SetDeadline(time.Time{}) // Disable the deadline
+	conn.SetDeadline(time.Now().Add(constant.CONNECTION_TIMEOUT))
+	defer conn.SetDeadline(time.Time{})
 	
 	// convert the client id to a byte array
 	clientIDByte := [20]byte{}
@@ -117,7 +103,7 @@ func ShakeHandWithPeer(torrent model.Torrent, peer model.Peer, clientID string, 
 }
 
 func ReceiveBitFieldMessage(conn net.Conn) (*model.Message, error) {
-	conn.SetDeadline(time.Now().Add(10 * time.Second))
+	conn.SetDeadline(time.Now().Add(constant.CONNECTION_TIMEOUT))
 	defer conn.SetDeadline(time.Time{}) // Disable the deadline
 
 

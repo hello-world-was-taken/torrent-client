@@ -10,8 +10,9 @@ const (
 
 // connection timeout is the time after which the connection is closed
 const (
-	CONNECTION_TIMEOUT = 30 * time.Second
+	CONNECTION_TIMEOUT = 10 * time.Second
 	PIECE_DOWNLOAD_TIMEOUT = 30 * time.Second
+	PIECE_UPLOAD_TIMEOUT = 30 * time.Second
 	MAX_RETRY_COUNT = 5
 )
 
