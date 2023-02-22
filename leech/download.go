@@ -101,7 +101,7 @@ func StartDownload(filename string) {
 
 func StoreDownloadedPieces(donePieces int, torrent model.Torrent, resultChannel chan *PieceResult, err error, outFile *os.File, piecesCache *model.PiecesCache, buf []byte) {
 	
-	for donePieces < len(torrent.Info.PiecesToByteArray()) {
+	for len(piecesCache.Pieces) < len(torrent.Info.PiecesToByteArray()) {
 		res := <-resultChannel
 		
 		// calculate the start and end index of the piece
