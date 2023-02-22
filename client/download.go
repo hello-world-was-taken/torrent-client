@@ -30,6 +30,21 @@ type PieceRequest struct {
 
 
 func StartDownload(torrent model.Torrent, peers []model.Peer) {
+
+	// create output file
+	outFile, err := os.Create("./downloads/downloaded_file.iso")
+	if err != nil {
+		log.Fatalf("Error creating output file: ", err)
+	}
+	// load the cache from a file
+	piecesCache, err := LoadCache("downloaded_file.json")
+	if err != nil {
+		// error loading file, assign pieces hash to an new map[int]bool
+		piecesCache = &model.PiecesCache{}
+		fmt.Println("Error loading file")
+		return
+	}
+
 	// create two channels for the download and upload
 	piecesHashList := torrent.Info.PiecesToByteArray()
 	downloadChannel := make(chan *PieceRequest, len(piecesHashList))
@@ -60,6 +75,18 @@ func StartDownload(torrent model.Torrent, peers []model.Peer) {
 		pieceStartIdx := res.Index * pieceSize
 		pieceEndIdx := utils.CalcMin(pieceStartIdx + pieceSize, int(torrent.Info.Length))
 
+
+		// write to the output file
+		_, err = outFile.WriteAt(res.Block, int64(pieceStartIdx))
+		if err != nil {
+			log.Fatalf("Failed to write to file: %s", "downloaded_file.iso")
+			return
+		}
+
+		// update the download metadata of the downloaded files
+		piecesCache.Pieces[res.Index] = true
+		SaveCache("downloaded_file.json", piecesCache)
+
 		copy(buf[pieceStartIdx:pieceEndIdx], res.Block)
 		donePieces++
 
@@ -71,19 +98,19 @@ func StartDownload(torrent model.Torrent, peers []model.Peer) {
 	fmt.Println("Done downloading all pieces")
 	close(downloadChannel)
 
-	path := "downloaded_file.iso"
-	outFile, err := os.Create(path)
-	if err != nil {
-		log.Fatalf("Failed to create file: %s", path)
-		// return err
-	}
-	defer outFile.Close()
+	// path := "downloaded_file.iso"
+	// outFile, err := os.Create(path)
+	// if err != nil {
+	// 	log.Fatalf("Failed to create file: %s", path)
+	// 	// return err
+	// }
+	// defer outFile.Close()
 
-	_, err = outFile.Write(buf)
-	if err != nil {
-		log.Fatalf("Failed to write to file: %s", path)
-		// return err
-	}
+	// _, err = outFile.Write(buf)
+	// if err != nil {
+	// 	log.Fatalf("Failed to write to file: %s", path)
+	// 	// return err
+	// }
 	// return nil
 
 	// return buf, nil
