@@ -45,7 +45,7 @@ func CreateFile(torrent *model.Torrent) (*os.File, string, error) {
 		return outFile, "", err
 	} else {
 		// single file
-		outFile, err := os.Create("downloads" + "/" + torrent.Info.Name)
+		outFile, err := CreateOrOpenFile("downloads" + "/" + torrent.Info.Name)
 		if err != nil {
 			return nil, "", err
 		}
