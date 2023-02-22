@@ -56,7 +56,7 @@ func LoadCache(filename string) (*model.PiecesCache, error) {
 	if os.IsNotExist(err) {
 		file, err := os.Create(filename)
 		if err != nil {
-			fmt.Println("Error while creating file")
+			fmt.Println("Error while creating file", filename)
 			return nil, err
 		}
 		defer file.Close()
