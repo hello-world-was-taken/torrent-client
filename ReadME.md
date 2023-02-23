@@ -4,12 +4,12 @@ This is a command-line torrent client application developed in Golang that can d
 Clone the repository using the following command:
 
 ```sh
-git clone https://github.com/your-username/your-repo.git
+git clone https://github.com/hello-world-was-taken/torrent-dsp
 ```
 
 Navigate to the directory containing the source code:
 ```sh
-cd your-repo
+cd torrent-dsp
 ```
 
 Run the application using the following command:
