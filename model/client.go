@@ -39,7 +39,6 @@ func (client *Client) UnChoke() {
 	if err != nil {
 		log.Fatalf("Error sending unchoke message to peer: %s", err)
 	}
-	// client.ChokedState = constant.UN_CHOKE
 
 }
 
