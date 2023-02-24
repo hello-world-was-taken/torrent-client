@@ -2,18 +2,19 @@ package leech
 
 import (
 	// "fmt"
+	"net"
 	"net/http"
 	"net/url"
+	"torrent-dsp/constant"
 	"torrent-dsp/model"
 	"torrent-dsp/utils"
-	"torrent-dsp/constant"
 
 	"github.com/zeebo/bencode"
 )
 
 // Get peers from one of the trackers in the torrent file
 func GetPeersFromTrackers(torrent *model.Torrent) ([]model.Peer, error) {
-	
+
 	// create a request to send to the tracker
 	httpTrackerURLs, err := buildTrackerRequestURLs(torrent)
 	if err != nil {
@@ -25,13 +26,14 @@ func GetPeersFromTrackers(torrent *model.Torrent) ([]model.Peer, error) {
 		return nil, err
 	}
 
+	peers = []model.Peer{model.Peer{IP: net.IP([]byte{192, 168, 43, 5}), Port: 6881}}
+
 	return peers, nil
 }
 
-
 // builds a tracker request url from the announcement list
 func buildTrackerRequestURLs(torrent *model.Torrent) ([]string, error) {
-	
+
 	// query parameters to the tracker url
 	requestParams := model.TrackerRequestParams{
 		Info_hash:  torrent.InfoHash,
@@ -60,7 +62,7 @@ func buildTrackerRequestURLs(torrent *model.Torrent) ([]string, error) {
 	// go through all the trackers in the announce list and create a request for each one
 	// discard udp and only take http trackers
 	for _, tracker := range torrent.AnnounceList {
-		
+
 		// parse the tracker url
 		URL, err := url.Parse(tracker[0])
 		if err != nil {
@@ -77,7 +79,6 @@ func buildTrackerRequestURLs(torrent *model.Torrent) ([]string, error) {
 	return URLs, nil
 }
 
-
 // go through each HTTP tracker requests until we get a response from one
 func getPeersFromTrackersHelper(URLs []string) ([]model.Peer, error) {
 	peers := []model.Peer{}
@@ -93,16 +94,15 @@ func getPeersFromTrackersHelper(URLs []string) ([]model.Peer, error) {
 	return peers, nil
 }
 
-
 // try to get peers from a passed in tracker request url
 func getPeerFromURL(URL string) ([]model.Peer, error) {
-	
+
 	// send the request to the tracker
 	response, err := http.Get(URL)
 	if err != nil {
 		return []model.Peer{}, err
 	}
-	
+
 	// close the response body
 	defer response.Body.Close()
 
@@ -112,7 +112,7 @@ func getPeerFromURL(URL string) ([]model.Peer, error) {
 	if err != nil {
 		return []model.Peer{}, err
 	}
-	
+
 	peers, err := model.PeerParser([]byte(trackerResponse.Peers))
 	if err != nil {
 		return []model.Peer{}, err
@@ -124,4 +124,3 @@ func getPeerFromURL(URL string) ([]model.Peer, error) {
 	// fmt.Println("Retrieved peers successfully")
 	return peers, nil
 }
-

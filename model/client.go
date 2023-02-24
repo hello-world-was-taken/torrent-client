@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/binary"
 	"errors"
+
 	// "fmt"
 	"log"
 	"net"

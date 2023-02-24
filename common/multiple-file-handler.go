@@ -20,20 +20,20 @@ func CreateFile(torrent *model.Torrent) (*os.File, string, error) {
 			if err != nil {
 				return nil, "", err
 			}
-		
+
 			// Get the directory path of the file
 			dirPath := filepath.Dir(absPath)
-		
+
 			// Create the directory path if it doesn't exist
 			if err := os.MkdirAll(dirPath, os.ModePerm); err != nil {
 				return nil, "", err
 			}
-		
+
 			// Create the file
 			fmt.Println("Creating file", idx)
 			file, err := os.Create(absPath)
 			if err != nil {
-				return nil,"", err
+				return nil, "", err
 			}
 			defer file.Close()
 		}
@@ -52,7 +52,6 @@ func CreateFile(torrent *model.Torrent) (*os.File, string, error) {
 		return outFile, "", err
 	}
 }
-
 
 func CreateOrOpenFile(filename string) (*os.File, error) {
 	// load the cache from a file

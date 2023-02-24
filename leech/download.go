@@ -112,8 +112,8 @@ func StoreDownloadedPieces(donePieces int, torrent model.Torrent, resultChannel 
 		}
 
 		// update the cache
-		piecesCache.Pieces[res.Index] = true
-		SaveCache(outFile.Name()+".json", piecesCache)
+		// piecesCache.Pieces[res.Index] = true
+		// SaveCache(outFile.Name()+".json", piecesCache)
 
 		// TODO: do we need to store it on the buffer?
 		copy(buf[pieceStartIdx:pieceEndIdx], res.Block)
