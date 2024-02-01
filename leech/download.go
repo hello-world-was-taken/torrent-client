@@ -7,7 +7,7 @@ import (
 	"os"
 	"runtime"
 	"time"
-	"net"
+	// "net"
 
 	"torrent-dsp/common"
 	"torrent-dsp/constant"
@@ -41,7 +41,7 @@ func PrepareDownload(filename string) (model.Torrent, []model.Peer) {
 		log.Fatal(err)
 	}
 
-	peers = []model.Peer{ {IP: net.IP([]byte{127, 0, 0, 1}), Port: 6881} }
+	// peers = []model.Peer{ {IP: net.IP([]byte{127, 0, 0, 1}), Port: 6881} }
 
 	return torrent, peers
 }
@@ -131,7 +131,7 @@ func DownloadFromPeer(peer model.Peer, torrent model.Torrent, downloadChannel ch
 	// create a client with the peer
 	client, err := ClientFactory(peer, torrent)
 	if err != nil {
-		fmt.Printf("Failed to create a client with peer %s", peer.String())
+		fmt.Printf("Failed to create a client with peer %s %s", peer.String(), err)
 		return
 	}
 

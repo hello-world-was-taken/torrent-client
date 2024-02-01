@@ -197,7 +197,7 @@ func ReceiveRequest(conn net.Conn) (*model.Message, error) {
 
 func handleRequest(requestMsg model.Message, conn net.Conn) error {
 
-	file, err := os.Open("/Users/kemerhabesha/Documents/Programming-Related/torrent-dsp/downloads/debian-11.6.0-amd64-netinst.iso")
+	file, err := os.Open("downloads/debian-11.6.0-amd64-netinst.iso")
 	defer file.Close()
 
 	// parse payload

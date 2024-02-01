@@ -63,6 +63,16 @@ func CreateOrOpenFile(filename string) (*os.File, error) {
 
 	// if the error is that the file does not exist, then create a new cache
 	if os.IsNotExist(err) {
+		// Check if the directory exists
+		dir := filepath.Dir(filename)
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			// Create the directory if it doesn't exist
+			if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+				fmt.Println("Error while creating directory:", dir)
+				return nil, err
+			}
+		}
+
 		file, err := os.Create(filename)
 		if err != nil {
 			fmt.Println("Error while creating file", filename)

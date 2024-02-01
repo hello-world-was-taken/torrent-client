@@ -2,7 +2,7 @@ package leech
 
 import (
 	// "fmt"
-	"net"
+	// "net"
 	"net/http"
 	"net/url"
 	"torrent-dsp/constant"
@@ -26,7 +26,7 @@ func GetPeersFromTrackers(torrent *model.Torrent) ([]model.Peer, error) {
 		return nil, err
 	}
 
-	peers = []model.Peer{model.Peer{IP: net.IP([]byte{192, 168, 43, 5}), Port: 6881}}
+	// peers = []model.Peer{model.Peer{IP: net.IP([]byte{192, 168, 0, 103}), Port: 6881}}
 
 	return peers, nil
 }
